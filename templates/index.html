@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>숙제 검사 MVP</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header>
+      <p class="eyebrow">MVP 데모</p>
+      <h1>숙제 검사 AI + 3D 캐릭터 레벨업</h1>
+      <p class="subtitle">
+        숙제를 업로드하면 점수와 피드백을 확인하고, 경험치를 통해 캐릭터 레벨이 올라갑니다.
+      </p>
+    </header>
+
+    <section class="card">
+      <h2>1) 숙제 사진 업로드</h2>
+      <form id="upload-form">
+        <label class="upload-box">
+          <input id="photo" type="file" name="photo" accept="image/*" required />
+          <span>이미지를 선택하세요</span>
+        </label>
+        <button type="submit">분석 시작</button>
+      </form>
+      <p class="hint">PNG/JPG/WEBP만 지원합니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>2) AI 채점 결과</h2>
+      <div id="result" class="result">
+        <p>아직 업로드된 숙제가 없습니다.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3) 캐릭터 레벨</h2>
+      <div class="character">
+        <div class="avatar" id="avatar">
+          <div class="face"></div>
+        </div>
+        <div class="stats">
+          <p><strong>현재 레벨:</strong> <span id="level">1</span></p>
+          <p><strong>획득 경험치:</strong> <span id="experience">0</span></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
