@@ -1,54 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>숙제 검사 MVP</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <main class="container">
-    <header>
-      <p class="eyebrow">MVP 데모</p>
-      <h1>숙제 검사 AI + 3D 캐릭터 레벨업</h1>
-      <p class="subtitle">
-        숙제를 업로드하면 점수와 피드백을 확인하고, 경험치를 통해 캐릭터 레벨이 올라갑니다.
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Homework Checker</title>
+    <style>
+      body { font-family: system-ui, -apple-system, sans-serif; margin: 24px; }
+      .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; max-width: 720px; }
+      .row { display: flex; gap: 16px; align-items: flex-start; }
+      img { max-width: 240px; border-radius: 12px; border: 1px solid #eee; }
+      .muted { color: #666; font-size: 14px; }
+      .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f2f2f2; margin-right: 8px; }
+      button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; cursor: pointer; }
+      input[type="file"] { margin: 10px 0; }
+      #error { color: #c00; margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>숙제 검사</h2>
+      <p class="muted">
+        현재 상태:
+        <span class="badge">레벨 <span id="level">{{ state.level }}</span></span>
+        <span class="badge">누적 XP <span id="totalXp">{{ state.total_xp }}</span></span>
       </p>
-    </header>
 
-    <section class="card">
-      <h2>1) 숙제 사진 업로드</h2>
-      <form id="upload-form">
-        <label class="upload-box">
-          <input id="photo" type="file" name="photo" accept="image/*" required />
-          <span>이미지를 선택하세요</span>
-        </label>
-        <button type="submit">분석 시작</button>
+      <form id="uploadForm">
+        <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required />
+        <div>
+          <button type="submit">업로드 & 검사</button>
+        </div>
       </form>
-      <p class="hint">PNG/JPG/WEBP만 지원합니다.</p>
-    </section>
 
-    <section class="card">
-      <h2>2) AI 채점 결과</h2>
-      <div id="result" class="result">
-        <p>아직 업로드된 숙제가 없습니다.</p>
-      </div>
-    </section>
+      <div id="error"></div>
 
-    <section class="card">
-      <h2>3) 캐릭터 레벨</h2>
-      <div class="character">
-        <div class="avatar" id="avatar">
-          <div class="face"></div>
+      <hr style="margin:16px 0;" />
+
+      <div class="row">
+        <div>
+          <img id="preview" alt="업로드 이미지 미리보기" style="display:none;" />
         </div>
-        <div class="stats">
-          <p><strong>현재 레벨:</strong> <span id="level">1</span></p>
-          <p><strong>획득 경험치:</strong> <span id="experience">0</span></p>
+        <div>
+          <p><strong>점수:</strong> <span id="score">-</span></p>
+          <p><strong>피드백:</strong> <span id="feedback">-</span></p>
+          <p><strong>획득 XP:</strong> <span id="gainedXp">-</span></p>
         </div>
       </div>
-    </section>
-  </main>
+    </div>
 
-  <script src="/static/app.js"></script>
-</body>
+    <script>
+      const form = document.getElementById("uploadForm");
+      const errorEl = document.getElementById("error");
+      const previewEl = document.getElementById("preview");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.textContent = "";
+
+        const fd = new FormData(form);
+
+        try {
+          const res = await fetch("/upload", { method: "POST", body: fd });
+          const data = await res.json();
+
+          if (!res.ok) {
+            errorEl.textContent = data.error || "업로드에 실패했습니다.";
+            return;
+          }
+
+          document.getElementById("score").textContent = data.score;
+          document.getElementById("feedback").textContent = data.feedback;
+          document.getElementById("gainedXp").textContent = data.gained_xp;
+
+          document.getElementById("totalXp").textContent = data.total_xp;
+          document.getElementById("level").textContent = data.level;
+
+          if (data.image_url) {
+            previewEl.src = data.image_url;
+            previewEl.style.display = "block";
+          }
+        } catch (err) {
+          errorEl.textContent = "네트워크 오류가 발생했습니다.";
+        }
+      });
+    </script>
+  </body>
 </html>
