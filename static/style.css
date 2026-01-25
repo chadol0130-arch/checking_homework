@@ -1,0 +1,178 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --text: #1f2a44;
+  --muted: #5f6b85;
+  --primary: #4c6fff;
+  --accent: #ffc857;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "Pretendard", "Apple SD Gothic Neo", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+  display: grid;
+  gap: 24px;
+}
+
+header {
+  display: grid;
+  gap: 8px;
+}
+
+.eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 16px;
+}
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.upload-box {
+  flex: 1 1 260px;
+  border: 2px dashed #c6d2ff;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  background: #f8f9ff;
+  cursor: pointer;
+}
+
+.upload-box input {
+  display: none;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.result {
+  background: #f3f5ff;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.error {
+  color: #c2410c;
+  margin: 0;
+}
+
+.character {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+}
+
+.avatar {
+  width: 140px;
+  height: 140px;
+  border-radius: 32px;
+  background: linear-gradient(135deg, #4c6fff, #7d8dff);
+  position: relative;
+  display: grid;
+  place-items: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 16px 30px rgba(76, 111, 255, 0.35);
+}
+
+.avatar.level-1 {
+  background: linear-gradient(135deg, #9aa9ff, #c4ccff);
+}
+
+.avatar.level-3 {
+  background: linear-gradient(135deg, #5eead4, #3b82f6);
+}
+
+.avatar.level-5 {
+  background: linear-gradient(135deg, #f472b6, #facc15);
+}
+
+.face {
+  width: 64px;
+  height: 64px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.85);
+  position: relative;
+}
+
+.face::before,
+.face::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1f2a44;
+}
+
+.face::before {
+  left: 14px;
+}
+
+.face::after {
+  right: 14px;
+}
+
+.stats p {
+  margin: 6px 0;
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  .character {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
