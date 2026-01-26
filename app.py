@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -152,6 +153,7 @@ def upload() -> Any:
             "total_xp": total_xp,
             "level": level,
             "image_url": f"/uploads/{unique_name}",
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
         }
     )
 
