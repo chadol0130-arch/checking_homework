@@ -78,7 +78,7 @@ def _level_from_total_xp(total_xp: int) -> int:
 
 def _allowed_file(filename: str) -> bool:
     _, ext = os.path.splitext(filename.lower())
-    return ext in {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
+    return ext in {".png", ".jpg", ".jpeg", ".webp"}
 
 
 def _load_state() -> Dict[str, int]:
@@ -124,7 +124,7 @@ def upload() -> Any:
         return jsonify({"error": "파일 이름이 비어 있습니다."}), 400
 
     if not _allowed_file(file_storage.filename):
-        return jsonify({"error": "이미지 또는 PDF 파일만 업로드할 수 있습니다."}), 400
+        return jsonify({"error": "이미지 파일만 업로드할 수 있습니다."}), 400
 
     # 1) 바이트를 한 번 읽어서 평가 + 저장 모두에 사용
     payload = file_storage.read()
@@ -145,9 +145,6 @@ def upload() -> Any:
     level = _level_from_total_xp(total_xp)
     _save_state(total_xp=total_xp, level=level)
 
-    _, ext = os.path.splitext(unique_name.lower())
-    file_type = "pdf" if ext == ".pdf" else "image"
-
     return jsonify(
         {
             "score": result.score,
@@ -155,8 +152,7 @@ def upload() -> Any:
             "gained_xp": result.gained_xp,
             "total_xp": total_xp,
             "level": level,
-            "file_url": f"/uploads/{unique_name}",
-            "file_type": file_type,
+            "image_url": f"/uploads/{unique_name}",
             "submitted_at": datetime.now(timezone.utc).isoformat(),
         }
     )
