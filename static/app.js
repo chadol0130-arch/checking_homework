@@ -30,8 +30,16 @@ const resultBox = document.getElementById("result");
 const levelText = document.getElementById("level");
 const experienceText = document.getElementById("experience");
 const avatar = document.getElementById("avatar");
-const previewImage = document.getElementById("preview");
+const previewImage = document.getElementById("preview-image");
+const previewPdf = document.getElementById("preview-pdf");
+const previewLink = document.getElementById("preview-link");
 const previewHint = document.getElementById("preview-hint");
+const localPreviewImage = document.getElementById("local-preview-image");
+const localPreviewPdf = document.getElementById("local-preview-pdf");
+const localPreviewHint = document.getElementById("local-preview-hint");
+const localFileMeta = document.getElementById("local-file-meta");
+const fileInput = document.getElementById("photo");
+let localObjectUrl = null;
 const historyList = document.getElementById("history");
 
 const sessionId = (() => {
@@ -86,9 +94,33 @@ onValue(historyRef, (snapshot) => {
   }
 });
 
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (!file) {
+    resetLocalPreview();
+    return;
+  }
+
+  if (localObjectUrl) {
+    URL.revokeObjectURL(localObjectUrl);
+  }
+  localObjectUrl = URL.createObjectURL(file);
+  localFileMeta.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
+  localPreviewHint.style.display = "none";
+
+  if (file.type === "application/pdf") {
+    localPreviewPdf.src = localObjectUrl;
+    localPreviewPdf.style.display = "block";
+    localPreviewImage.style.display = "none";
+  } else {
+    localPreviewImage.src = localObjectUrl;
+    localPreviewImage.style.display = "block";
+    localPreviewPdf.style.display = "none";
+  }
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const fileInput = document.getElementById("photo");
   if (!fileInput.files.length) {
     return;
   }
@@ -115,10 +147,8 @@ form.addEventListener("submit", async (event) => {
       <p><strong>획득 XP:</strong> ${payload.gained_xp}</p>
     `;
 
-    if (payload.image_url) {
-      previewImage.src = payload.image_url;
-      previewImage.style.display = "block";
-      previewHint.style.display = "none";
+    if (payload.file_url) {
+      updateServerPreview(payload.file_url, payload.file_type);
     }
 
     await set(sessionRef, {
@@ -132,13 +162,43 @@ form.addEventListener("submit", async (event) => {
       score: payload.score,
       feedback: payload.feedback,
       gained_xp: payload.gained_xp,
-      image_url: payload.image_url,
+      file_url: payload.file_url,
+      file_type: payload.file_type,
       created_at: payload.submitted_at,
     });
   } catch (error) {
     resultBox.innerHTML = `<p class="error">${error.message}</p>`;
   }
 });
+
+function updateServerPreview(fileUrl, fileType) {
+  previewHint.style.display = "none";
+  previewLink.href = fileUrl;
+  previewLink.style.display = "inline-flex";
+
+  if (fileType === "pdf") {
+    previewPdf.src = fileUrl;
+    previewPdf.style.display = "block";
+    previewImage.style.display = "none";
+  } else {
+    previewImage.src = fileUrl;
+    previewImage.style.display = "block";
+    previewPdf.style.display = "none";
+  }
+}
+
+function resetLocalPreview() {
+  if (localObjectUrl) {
+    URL.revokeObjectURL(localObjectUrl);
+    localObjectUrl = null;
+  }
+  localPreviewImage.src = "";
+  localPreviewPdf.src = "";
+  localPreviewImage.style.display = "none";
+  localPreviewPdf.style.display = "none";
+  localPreviewHint.style.display = "block";
+  localFileMeta.textContent = "";
+}
 
 function updateAvatar(level) {
   avatar.className = "avatar";

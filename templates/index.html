@@ -48,11 +48,23 @@
         <form id="upload-form">
           <label class="upload-box" for="photo">
             <strong>사진 선택</strong>
-            <p class="hint">PNG, JPG, WEBP 파일을 업로드할 수 있어요.</p>
-            <input id="photo" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required />
+            <p class="hint">PNG, JPG, WEBP, PDF 파일을 업로드할 수 있어요.</p>
+            <input
+              id="photo"
+              name="photo"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,application/pdf"
+              required
+            />
           </label>
           <button type="submit">업로드 & 검사</button>
         </form>
+        <div class="upload-preview" id="upload-preview">
+          <img id="local-preview-image" alt="선택한 숙제 이미지 미리보기" />
+          <iframe id="local-preview-pdf" title="선택한 숙제 PDF 미리보기"></iframe>
+          <p class="hint" id="local-preview-hint">제출 전에 선택한 파일 미리보기가 표시됩니다.</p>
+          <p class="file-meta" id="local-file-meta"></p>
+        </div>
         <div class="result" id="result">
           <p class="hint">아직 제출된 결과가 없어요.</p>
         </div>
@@ -64,8 +76,10 @@
           <ul class="history" id="history"></ul>
         </div>
         <div class="preview">
-          <img id="preview" alt="최근 업로드 이미지 미리보기" />
-          <p class="hint" id="preview-hint">이미지가 업로드되면 미리보기가 표시됩니다.</p>
+          <img id="preview-image" alt="최근 업로드 이미지 미리보기" />
+          <iframe id="preview-pdf" title="최근 업로드 PDF 미리보기"></iframe>
+          <a class="file-link" id="preview-link" target="_blank" rel="noopener">파일 열기</a>
+          <p class="hint" id="preview-hint">이미지 또는 PDF가 업로드되면 미리보기가 표시됩니다.</p>
         </div>
       </section>
     </div>
