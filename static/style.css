@@ -805,6 +805,12 @@ button:disabled {
   color: var(--muted);
 }
 
+.submission-feedback {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .submission-rate {
   font-weight: 600;
   color: var(--text);

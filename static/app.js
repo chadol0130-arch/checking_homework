@@ -274,7 +274,11 @@ form.addEventListener("submit", async (event) => {
       ? matchResult.matchedGoals.join(", ")
       : "없음";
 
+    const scoreText = typeof payload.score === "number" ? `${payload.score}점` : "-";
+    const feedbackText = payload.feedback || "피드백 없음";
     resultBox.innerHTML = `
+      <p><strong>채점 점수:</strong> ${scoreText}</p>
+      <p><strong>피드백:</strong> ${feedbackText}</p>
       <p><strong>달성 목표:</strong> ${matchedGoalsLabel}</p>
       <p><strong>달성률:</strong> ${achievementRate}% (${achievedAfter}/${totalGoals})</p>
       <p><strong>획득 XP:</strong> ${gainedXp}</p>
@@ -305,6 +309,8 @@ form.addEventListener("submit", async (event) => {
     await set(submissionRef, {
       gained_xp: gainedXp,
       achievement_rate: achievementRate,
+      score: payload.score ?? null,
+      feedback: payload.feedback ?? null,
       matched_goals: matchResult.matchedGoals,
       total_goals: totalGoals,
       achieved_goals: achievedAfter,
@@ -648,7 +654,18 @@ function renderDaySubmissions(entries) {
       goalProgress.textContent = "목표 -";
     }
 
-    meta.append(xpText, goalProgress);
+    const scoreText = document.createElement("span");
+    if (typeof entry.score === "number") {
+      scoreText.textContent = `점수 ${entry.score}점`;
+    } else {
+      scoreText.textContent = "점수 -";
+    }
+
+    meta.append(xpText, goalProgress, scoreText);
+
+    const feedback = document.createElement("p");
+    feedback.className = "submission-feedback";
+    feedback.textContent = entry.feedback || "피드백 없음";
 
     const tags = document.createElement("div");
     tags.className = "submission-tags";
@@ -660,7 +677,7 @@ function renderDaySubmissions(entries) {
       tags.appendChild(createTag("매칭 없음", "miss"));
     }
 
-    item.append(head, meta, tags);
+    item.append(head, meta, feedback, tags);
     daySubmissionList.appendChild(item);
   }
 }
