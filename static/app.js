@@ -209,3 +209,66 @@ function updateAvatar(level) {
     }
   }
 }
+
+// 로그인 팝업 관련 JavaScript
+const loginBtn = document.getElementById("login-btn");
+const loginPopup = document.getElementById("login-popup");
+const closeLoginPopup = document.getElementById("close-login-popup");
+const loginForm = document.getElementById("login-form");
+const signupBtn = document.getElementById("signup-btn");
+const findIdBtn = document.getElementById("find-id-btn");
+const findPasswordBtn = document.getElementById("find-password-btn");
+
+if (loginBtn && loginPopup) {
+  // 로그인 버튼 클릭 시 팝업 열기
+  loginBtn.addEventListener("click", () => {
+    loginPopup.classList.add("active");
+  });
+
+  // 닫기 버튼 클릭 시 팝업 닫기
+  if (closeLoginPopup) {
+    closeLoginPopup.addEventListener("click", () => {
+      loginPopup.classList.remove("active");
+    });
+  }
+
+  // 팝업 배경 클릭 시 닫기
+  loginPopup.addEventListener("click", (e) => {
+    if (e.target === loginPopup) {
+      loginPopup.classList.remove("active");
+    }
+  });
+
+  // 로그인 폼 제출
+  if (loginForm) {
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const id = document.getElementById("login-id")?.value;
+      const password = document.getElementById("login-password")?.value;
+      console.log("로그인 시도:", { id, password });
+      // 여기에 실제 로그인 로직을 추가할 수 있습니다
+      alert("로그인 기능은 아직 구현되지 않았습니다.");
+    });
+  }
+
+  // 회원가입 버튼
+  if (signupBtn) {
+    signupBtn.addEventListener("click", () => {
+      alert("회원가입 기능은 아직 구현되지 않았습니다.");
+    });
+  }
+
+  // 아이디 찾기 버튼
+  if (findIdBtn) {
+    findIdBtn.addEventListener("click", () => {
+      alert("아이디 찾기 기능은 아직 구현되지 않았습니다.");
+    });
+  }
+
+  // 비밀번호 찾기 버튼
+  if (findPasswordBtn) {
+    findPasswordBtn.addEventListener("click", () => {
+      alert("비밀번호 찾기 기능은 아직 구현되지 않았습니다.");
+    });
+  }
+}

@@ -3,16 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Homework Checker</title>
-    <link rel="stylesheet" href="/static/style.css" />
+    <title>로그인 - Homework Checker</title>
     <style>
-      /* 공통 스타일 */
       body {
         font-family: system-ui, -apple-system, sans-serif;
-        margin: 24px;
+        margin: 0;
+        padding: 0;
       }
 
-      /* ========== 로그인 기능 스타일 ========== */
+      /* 로그인 버튼 스타일 */
       .login-button {
         background: #4c6fff;
         color: white;
@@ -27,6 +26,8 @@
       .login-button:hover {
         background: #3a5eef;
       }
+
+      /* 로그인 팝업 스타일 */
       .login-popup {
         display: none;
         position: fixed;
@@ -249,53 +250,15 @@
       .divider span {
         padding: 0 12px;
       }
-
-      /* 추가 스타일은 style.css에서 가져옴 */
     </style>
   </head>
   <body>
-    <!-- ========== 로그인 기능 ========== -->
+    <!-- 로그인 버튼 -->
     <div style="position: fixed; top: 24px; right: 24px; z-index: 1000;">
       <button id="login-btn" class="login-button">로그인</button>
     </div>
 
-    <div class="container">
-      <header>
-        <p class="eyebrow">Homework Pulse</p>
-        <h1>숙제 검사 결과를 한눈에</h1>
-        <p class="subtitle">
-          업로드 → AI 채점 → Firebase 기록까지 한 번에 처리되는 토스 스타일 경험을 제공합니다.
-        </p>
-      </header>
-
-      <!-- 캐릭터 및 레벨/경험치 섹션 -->
-      <section class="card hero">
-        <div class="hero-text">
-          <h2>학습 진행 현황</h2>
-          <p class="hint">
-            최근 결과와 누적 경험치가 실시간으로 반영됩니다. 세션별 기록은 Firebase에 저장돼요.
-          </p>
-          <div class="stats">
-            <div class="stat">
-              <p class="stat-label">레벨</p>
-              <p class="stat-value" id="level">{{ state.level }}</p>
-            </div>
-            <div class="stat">
-              <p class="stat-label">누적 XP</p>
-              <p class="stat-value" id="experience">{{ state.total_xp }}</p>
-            </div>
-          </div>
-        </div>
-        <div class="character">
-          <div class="avatar" id="avatar">
-            <div class="face"></div>
-          </div>
-          <div>
-            <p class="hint">레벨이 오를수록 캐릭터 분위기가 바뀝니다.</p>
-          </div>
-        </div>
-      </section>
-
+    <!-- 로그인 팝업 -->
     <div id="login-popup" class="login-popup">
       <div class="login-popup-content">
         <div class="login-popup-header">
@@ -304,13 +267,14 @@
         </div>
         <form id="login-form" class="login-form">
           <div class="form-group">
-            <label for="login-id">아이디</label>
-            <input type="text" id="login-id" name="id" required />
+            <label for="login-id">이메일</label>
+            <input type="email" id="login-id" name="id" required />
           </div>
           <div class="form-group">
             <label for="login-password">비밀번호</label>
             <input type="password" id="login-password" name="password" required />
           </div>
+          <div id="login-error" class="error-message" style="display: none;"></div>
           <button type="submit" class="login-submit-button">로그인</button>
         </form>
         <div class="login-actions">
@@ -365,50 +329,6 @@
       </div>
     </div>
 
-      <!-- 숙제 업로드 및 검사 섹션 -->
-      <section class="card">
-        <h2>숙제 사진 업로드</h2>
-        <form id="upload-form">
-          <label class="upload-box" for="photo">
-            <strong>사진 선택</strong>
-            <p class="hint">PNG, JPG, WEBP, PDF 파일을 업로드할 수 있어요.</p>
-            <input
-              id="photo"
-              name="photo"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,application/pdf"
-              required
-            />
-          </label>
-          <button type="submit">업로드 & 검사</button>
-        </form>
-        <div class="upload-preview" id="upload-preview">
-          <img id="local-preview-image" alt="선택한 숙제 이미지 미리보기" />
-          <iframe id="local-preview-pdf" title="선택한 숙제 PDF 미리보기"></iframe>
-          <p class="hint" id="local-preview-hint">제출 전에 선택한 파일 미리보기가 표시됩니다.</p>
-          <p class="file-meta" id="local-file-meta"></p>
-        </div>
-        <div class="result" id="result">
-          <p class="hint">아직 제출된 결과가 없어요.</p>
-        </div>
-      </section>
-
-      <!-- 최근 제출 기록 및 미리보기 섹션 -->
-      <section class="card split">
-        <div>
-          <h2>최근 제출 기록</h2>
-          <ul class="history" id="history"></ul>
-        </div>
-        <div class="preview">
-          <img id="preview-image" alt="최근 업로드 이미지 미리보기" />
-          <iframe id="preview-pdf" title="최근 업로드 PDF 미리보기"></iframe>
-          <a class="file-link" id="preview-link" target="_blank" rel="noopener">파일 열기</a>
-          <p class="hint" id="preview-hint">이미지 또는 PDF가 업로드되면 미리보기가 표시됩니다.</p>
-        </div>
-      </section>
-    </div>
-
     <script type="module" src="/static/login.js"></script>
-    <script type="module" src="/static/app.js"></script>
   </body>
 </html>
