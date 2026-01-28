@@ -86,6 +86,7 @@ let submissionsCache = [];
 let submissionsByDay = {};
 let activeCalendarView = "day";
 let selectedDate = startOfDay(new Date());
+let currentCharacterStyle = "classic";
 
 const levelClassMap = [
   { threshold: 5, className: "level-5" },
@@ -164,7 +165,14 @@ function attachUserData(userId) {
     renderCalendar();
   });
 
-  dataUnsubscribers = [unsubSession, unsubSubmissions, unsubGoals];
+  const profileRef = ref(database, `users/${userId}/profile`);
+  const unsubProfile = onValue(profileRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    currentCharacterStyle = data.character_style || "classic";
+    updateAvatar(currentLevel ?? 1);
+  });
+
+  dataUnsubscribers = [unsubSession, unsubSubmissions, unsubGoals, unsubProfile];
 }
 
 function detachDataListeners() {
@@ -182,6 +190,7 @@ function resetDataState() {
   goalsCache = { daily: {}, weekly: {}, monthly: {} };
   submissionsCache = [];
   submissionsByDay = {};
+  currentCharacterStyle = "classic";
   levelText.textContent = "-";
   experienceText.textContent = "-";
   updateAvatar(1);
@@ -431,6 +440,9 @@ function resetLocalPreview() {
 
 function updateAvatar(level) {
   avatar.className = "avatar";
+  if (currentCharacterStyle) {
+    avatar.classList.add(`character-${currentCharacterStyle}`);
+  }
   for (const entry of levelClassMap) {
     if (level >= entry.threshold) {
       avatar.classList.add(entry.className);

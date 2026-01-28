@@ -23,6 +23,76 @@ body {
   color: var(--text);
 }
 
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1500;
+  background: rgba(245, 247, 251, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e1e8ff;
+}
+
+.topbar-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #4c6fff, #7d8dff);
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+.topbar-nav {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.topbar-nav a {
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.topbar-nav a:hover {
+  background: #eef2ff;
+  color: var(--primary);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-user {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .container {
   max-width: 1040px;
   margin: 0 auto;
@@ -197,6 +267,22 @@ button:disabled {
 
 .avatar.level-5 {
   background: linear-gradient(135deg, #f472b6, #facc15);
+}
+
+.avatar.character-classic {
+  background: linear-gradient(135deg, #4c6fff, #7d8dff);
+}
+
+.avatar.character-mint {
+  background: linear-gradient(135deg, #2dd4bf, #38bdf8);
+}
+
+.avatar.character-sunset {
+  background: linear-gradient(135deg, #fb7185, #fbbf24);
+}
+
+.avatar.character-candy {
+  background: linear-gradient(135deg, #a78bfa, #f472b6);
 }
 
 .face {
@@ -1034,6 +1120,85 @@ button:disabled {
   border-color: #fecaca;
 }
 
+.profile-card {
+  display: grid;
+  gap: 20px;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.profile-avatar .avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 26px;
+}
+
+.profile-form {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.profile-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.profile-field {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.profile-field input,
+.profile-field select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #dbe3ff;
+  font-size: 14px;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.character-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.character-options input {
+  margin-right: 6px;
+}
+
+.profile-section {
+  border-top: 1px solid #e1e8ff;
+  padding-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
 @media (max-width: 960px) {
   .day-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1044,6 +1209,15 @@ button:disabled {
 
   .calendar-controls {
     justify-items: start;
+  }
+
+  .topbar-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topbar-nav {
+    width: 100%;
   }
 }
 

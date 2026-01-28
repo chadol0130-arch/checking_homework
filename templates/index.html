@@ -8,7 +8,7 @@
     <style>
       body {
         font-family: system-ui, -apple-system, sans-serif;
-        margin: 24px;
+        margin: 0;
       }
 
       .login-button {
@@ -353,12 +353,28 @@
     </style>
   </head>
   <body>
-    <div style="position: static; margin: 24px 24px 0; display: flex; justify-content: flex-end;">
-      <button id="login-btn" class="login-button">로그인</button>
-    </div>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="brand-mark">HP</span>
+          <span>Homework Pulse</span>
+        </div>
+        <nav class="topbar-nav">
+          <a href="#dashboard">대시보드</a>
+          <a href="#goals">목표</a>
+          <a href="#upload">업로드</a>
+          <a href="#calendar">캘린더</a>
+          <a href="#profile">프로필</a>
+        </nav>
+        <div class="topbar-actions">
+          <span id="topbar-user" class="topbar-user"></span>
+          <button id="login-btn" class="login-button">로그인</button>
+        </div>
+      </div>
+    </header>
 
     <div class="container">
-      <header>
+      <header id="dashboard">
         <p class="eyebrow">Homework Pulse</p>
         <h1>숙제 검사 결과를 한눈에</h1>
         <p class="subtitle">
@@ -393,7 +409,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="goals">
         <div class="goal-header">
           <div>
             <h2>목표 설정</h2>
@@ -522,7 +538,7 @@
         </div>
       </div>
 
-      <section class="card">
+      <section class="card" id="upload">
         <h2>숙제 사진 업로드</h2>
         <form id="upload-form">
           <label class="upload-box" for="photo">
@@ -549,7 +565,7 @@
         </div>
       </section>
 
-      <section class="card calendar-card">
+      <section class="card calendar-card" id="calendar">
         <div class="calendar-header">
           <div>
             <h2>제출 기록 캘린더</h2>
@@ -639,9 +655,132 @@
           </div>
         </div>
       </section>
+
+      <section class="card profile-card" id="profile">
+        <div class="profile-header">
+          <div>
+            <h2>프로필 설정</h2>
+            <p class="hint">닉네임, 캐릭터 스타일, 내 정보를 저장해 맞춤형 기록을 관리하세요.</p>
+          </div>
+          <div class="profile-avatar">
+            <div class="avatar" id="profile-avatar">
+              <div class="face"></div>
+            </div>
+          </div>
+        </div>
+
+        <form id="profile-form" class="profile-form">
+          <div class="profile-grid">
+            <div class="profile-field">
+              <label for="profile-nickname">닉네임</label>
+              <input id="profile-nickname" type="text" placeholder="예: 수학왕 민지" maxlength="20" />
+            </div>
+            <div class="profile-field">
+              <label>캐릭터 스타일</label>
+              <div class="character-options" id="character-options">
+                <label><input type="radio" name="character-style" value="classic" checked /> 기본</label>
+                <label><input type="radio" name="character-style" value="mint" /> 민트</label>
+                <label><input type="radio" name="character-style" value="sunset" /> 선셋</label>
+                <label><input type="radio" name="character-style" value="candy" /> 캔디</label>
+              </div>
+            </div>
+            <div class="profile-field">
+              <label for="profile-school">학교</label>
+              <input id="profile-school" type="text" placeholder="예: 서울중학교" />
+            </div>
+            <div class="profile-field">
+              <label for="profile-grade">학년</label>
+              <select id="profile-grade">
+                <option value="">선택</option>
+                <option value="초등 1">초등 1</option>
+                <option value="초등 2">초등 2</option>
+                <option value="초등 3">초등 3</option>
+                <option value="초등 4">초등 4</option>
+                <option value="초등 5">초등 5</option>
+                <option value="초등 6">초등 6</option>
+                <option value="중등 1">중등 1</option>
+                <option value="중등 2">중등 2</option>
+                <option value="중등 3">중등 3</option>
+                <option value="고등 1">고등 1</option>
+                <option value="고등 2">고등 2</option>
+                <option value="고등 3">고등 3</option>
+              </select>
+            </div>
+            <div class="profile-field">
+              <label for="profile-gender">성별</label>
+              <select id="profile-gender">
+                <option value="">선택</option>
+                <option value="여">여</option>
+                <option value="남">남</option>
+                <option value="기타">기타</option>
+              </select>
+            </div>
+            <div class="profile-field">
+              <label for="profile-height">키 (cm)</label>
+              <input id="profile-height" type="number" min="0" step="0.1" />
+            </div>
+            <div class="profile-field">
+              <label for="profile-weight">몸무게 (kg)</label>
+              <input id="profile-weight" type="number" min="0" step="0.1" />
+            </div>
+            <div class="profile-field">
+              <label for="profile-score-korean">국어 점수</label>
+              <input id="profile-score-korean" type="number" min="0" max="100" />
+            </div>
+            <div class="profile-field">
+              <label for="profile-score-english">영어 점수</label>
+              <input id="profile-score-english" type="number" min="0" max="100" />
+            </div>
+            <div class="profile-field">
+              <label for="profile-score-math">수학 점수</label>
+              <input id="profile-score-math" type="number" min="0" max="100" />
+            </div>
+            <div class="profile-field">
+              <label for="profile-score-social">사회 점수</label>
+              <input id="profile-score-social" type="number" min="0" max="100" />
+            </div>
+            <div class="profile-field">
+              <label for="profile-score-science">과학 점수</label>
+              <input id="profile-score-science" type="number" min="0" max="100" />
+            </div>
+          </div>
+          <div class="profile-actions">
+            <button type="submit" class="action-button">프로필 저장</button>
+            <span id="profile-message" class="success-message" style="display: none;"></span>
+          </div>
+        </form>
+
+        <div class="profile-section">
+          <div>
+            <h3>비밀번호 변경</h3>
+            <p class="hint" id="password-note">이메일/비밀번호 계정만 변경할 수 있습니다.</p>
+          </div>
+          <form id="password-form" class="profile-form">
+            <div class="profile-grid compact">
+              <div class="profile-field">
+                <label for="current-password">현재 비밀번호</label>
+                <input id="current-password" type="password" />
+              </div>
+              <div class="profile-field">
+                <label for="new-password">새 비밀번호</label>
+                <input id="new-password" type="password" />
+              </div>
+              <div class="profile-field">
+                <label for="confirm-password">새 비밀번호 확인</label>
+                <input id="confirm-password" type="password" />
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button type="submit" class="action-button">비밀번호 변경</button>
+              <span id="password-message" class="success-message" style="display: none;"></span>
+            </div>
+          </form>
+        </div>
+      </section>
     </div>
 
     <script type="module" src="/static/login.js"></script>
     <script type="module" src="/static/app.js"></script>
+    <script type="module" src="/static/profile.js"></script>
   </body>
 </html>
