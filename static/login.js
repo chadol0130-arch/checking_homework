@@ -3,6 +3,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebas
 import { 
   getAuth, 
   createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  updateProfile,
   signInWithPopup,
   GoogleAuthProvider
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
@@ -21,6 +24,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope("profile");
+googleProvider.addScope("email");
+googleProvider.setCustomParameters({
+  prompt: "consent",
+});
 
 // 로그인 팝업 관련 JavaScript
 const loginBtn = document.getElementById("login-btn");
@@ -38,6 +46,20 @@ const signupForm = document.getElementById("signup-form");
 const signupError = document.getElementById("signup-error");
 const signupSuccess = document.getElementById("signup-success");
 const signupSubmitBtn = document.getElementById("signup-submit-btn");
+const googleLoginBtn = document.getElementById("google-login-btn");
+const loginError = document.getElementById("login-error");
+
+const updateLoginButtonLabel = (user) => {
+  if (!loginBtn) return;
+  if (!user) {
+    loginBtn.textContent = "로그인";
+    return;
+  }
+  const displayName =
+    user.displayName ||
+    (user.email ? user.email.split("@")[0] : "사용자");
+  loginBtn.textContent = displayName;
+};
 
 // 로그인 버튼 클릭 시 팝업 열기
 if (loginBtn) {
@@ -97,6 +119,7 @@ if (signupForm) {
   signupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
+    const name = document.getElementById("signup-name").value.trim();
     const email = document.getElementById("signup-email").value;
     const password = document.getElementById("signup-password").value;
     const passwordConfirm = document.getElementById("signup-password-confirm").value;
@@ -123,6 +146,14 @@ if (signupForm) {
       return;
     }
 
+    if (!name) {
+      if (signupError) {
+        signupError.textContent = "이름을 입력해주세요.";
+        signupError.style.display = "block";
+      }
+      return;
+    }
+
     // 로딩 상태
     if (signupSubmitBtn) {
       signupSubmitBtn.disabled = true;
@@ -134,6 +165,11 @@ if (signupForm) {
       // Firebase Authentication을 사용한 회원가입
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+
+      await updateProfile(user, {
+        displayName: name,
+      });
+      updateLoginButtonLabel(auth.currentUser);
       
       // 성공 메시지 표시
       if (signupSuccess) {
@@ -189,15 +225,60 @@ if (signupForm) {
 
 // 로그인 폼 제출 (기본 구현)
 if (loginForm) {
-  loginForm.addEventListener("submit", (e) => {
+  loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("login-id").value;
     const password = document.getElementById("login-password").value;
-    console.log("로그인 시도:", { email, password });
-    // 여기에 실제 로그인 로직을 추가할 수 있습니다
-    alert("로그인 기능은 아직 구현되지 않았습니다.");
+    if (loginError) loginError.style.display = "none";
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      if (loginPopup) loginPopup.classList.remove("active");
+    } catch (error) {
+      let errorMessage = "로그인에 실패했습니다.";
+      switch (error.code) {
+        case "auth/user-not-found":
+          errorMessage = "등록되지 않은 계정입니다.";
+          break;
+        case "auth/wrong-password":
+          errorMessage = "비밀번호가 올바르지 않습니다.";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "아이디(이메일) 형식이 올바르지 않습니다.";
+          break;
+        case "auth/network-request-failed":
+          errorMessage = "네트워크 오류가 발생했습니다.";
+          break;
+        default:
+          errorMessage = error.message || errorMessage;
+      }
+      if (loginError) {
+        loginError.textContent = errorMessage;
+        loginError.style.display = "block";
+      }
+    }
   });
 }
+
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", async () => {
+    if (loginError) loginError.style.display = "none";
+    try {
+      await signInWithPopup(auth, googleProvider);
+      if (loginPopup) loginPopup.classList.remove("active");
+    } catch (error) {
+      const errorMessage = error.message || "구글 로그인에 실패했습니다.";
+      if (loginError) {
+        loginError.textContent = errorMessage;
+        loginError.style.display = "block";
+      }
+    }
+  });
+}
+
+onAuthStateChanged(auth, (user) => {
+  updateLoginButtonLabel(user);
+});
 
 // 아이디 찾기 버튼
 if (findIdBtn) {
