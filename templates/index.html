@@ -6,13 +6,11 @@
     <title>Homework Checker</title>
     <link rel="stylesheet" href="/static/style.css" />
     <style>
-      /* 공통 스타일 */
       body {
         font-family: system-ui, -apple-system, sans-serif;
         margin: 24px;
       }
 
-      /* ========== 로그인 기능 스타일 ========== */
       .login-button {
         background: #4c6fff;
         color: white;
@@ -161,7 +159,6 @@
         color: #3a5eef;
       }
 
-      /* 회원가입 팝업 스타일 */
       .signup-popup {
         display: none;
         position: fixed;
@@ -250,12 +247,113 @@
         padding: 0 12px;
       }
 
-      /* 추가 스타일은 style.css에서 가져옴 */
+      .goal-header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .goal-periods {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .period-button {
+        border: 1px solid #d7ddf5;
+        background: #f7f9ff;
+        color: #3a5eef;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .period-button.active {
+        background: #4c6fff;
+        color: #fff;
+        border-color: #4c6fff;
+      }
+      .goal-form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .goal-form input {
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        font-size: 14px;
+      }
+      .goal-warning {
+        color: #c00;
+        font-size: 13px;
+        display: none;
+        margin-bottom: 12px;
+      }
+      .goal-lists {
+        display: grid;
+        gap: 16px;
+      }
+      .goal-list {
+        display: grid;
+        gap: 8px;
+      }
+      .goal-list h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+      .goal-list ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+      .goal-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #eee;
+        background: #fafafa;
+        font-size: 14px;
+      }
+      .goal-item.achieved {
+        background: #eef6ff;
+        border-color: #cdd9ff;
+      }
+      .goal-status {
+        font-size: 12px;
+        color: #4c6fff;
+        font-weight: 600;
+      }
+      .achievement {
+        margin-top: 18px;
+      }
+      .achievement-progress {
+        background: #f1f3f8;
+        border-radius: 999px;
+        height: 10px;
+        overflow: hidden;
+      }
+      .achievement-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #4c6fff, #7aa1ff);
+        transition: width 0.3s ease;
+      }
+      .achievement-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 13px;
+        color: #555;
+      }
     </style>
   </head>
   <body>
-    <!-- ========== 로그인 기능 ========== -->
-    <div style="position: fixed; top: 24px; right: 24px; z-index: 1000;">
+    <div style="position: static; margin: 24px 24px 0; display: flex; justify-content: flex-end;">
       <button id="login-btn" class="login-button">로그인</button>
     </div>
 
@@ -268,7 +366,6 @@
         </p>
       </header>
 
-      <!-- 캐릭터 및 레벨/경험치 섹션 -->
       <section class="card hero">
         <div class="hero-text">
           <h2>학습 진행 현황</h2>
@@ -296,41 +393,163 @@
         </div>
       </section>
 
-    <div id="login-popup" class="login-popup">
-      <div class="login-popup-content">
-        <div class="login-popup-header">
-          <h2>로그인</h2>
-          <button id="close-login-popup" class="close-button">×</button>
+      <section class="card">
+        <div class="goal-header">
+          <div>
+            <h2>목표 설정</h2>
+            <p class="hint">일/주/월 목표를 설정하고 달성률을 확인하세요.</p>
+          </div>
+          <div class="goal-periods">
+            <button type="button" class="period-button active" data-period="daily">일</button>
+            <button type="button" class="period-button" data-period="weekly">주</button>
+            <button type="button" class="period-button" data-period="monthly">월</button>
+          </div>
         </div>
-        <form id="login-form" class="login-form">
-          <div class="form-group">
-            <label for="login-id">아이디</label>
-            <input type="text" id="login-id" name="id" required />
+
+        <div class="goal-form">
+          <input id="goal-input" type="text" placeholder="예: 하루 2문제 풀기" />
+          <button id="goal-add-btn" class="action-button" type="button">추가</button>
+        </div>
+        <div id="goal-warning" class="goal-warning"></div>
+
+        <div class="goal-lists">
+          <div class="goal-list">
+            <h3>일 목표</h3>
+            <ul id="goal-list-daily"></ul>
           </div>
-          <div class="form-group">
-            <label for="login-password">비밀번호</label>
-            <input type="password" id="login-password" name="password" required />
+          <div class="goal-list">
+            <h3>주 목표</h3>
+            <ul id="goal-list-weekly"></ul>
           </div>
+<<<<<<< HEAD
+          <div class="goal-list">
+            <h3>월 목표</h3>
+            <ul id="goal-list-monthly"></ul>
+          </div>
+        </div>
+
+        <div class="achievement">
+          <div class="achievement-progress">
+            <div id="achievement-bar" class="achievement-bar"></div>
+          </div>
+          <div class="achievement-meta">
+            <span id="achievement-rate">0%</span>
+            <span id="achievement-count">0/0</span>
+          </div>
+          <p class="hint">현재는 파일명에 목표 문구가 포함되면 달성으로 처리합니다.</p>
+        </div>
+      </section>
+
+      <div id="login-popup" class="login-popup">
+        <div class="login-popup-content">
+          <div class="login-popup-header">
+            <h2>로그인</h2>
+            <button id="close-login-popup" class="close-button">×</button>
+          </div>
+          <form id="login-form" class="login-form">
+            <div class="form-group">
+              <label for="login-id">이메일</label>
+              <input type="email" id="login-id" name="id" required />
+            </div>
+            <div class="form-group">
+              <label for="login-password">비밀번호</label>
+              <input type="password" id="login-password" name="password" required />
+            </div>
+            <div id="login-error" class="error-message" style="display: none;"></div>
+            <button type="submit" class="login-submit-button">로그인</button>
+
+            <div class="divider">
+              <span>또는</span>
+            </div>
+
+            <button type="button" id="google-login-btn" class="google-signin-button">
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              구글로 로그인
+            </button>
+          </form>
+          <div class="login-actions">
+            <button type="button" id="signup-btn" class="action-button">회원가입</button>
+            <div class="find-actions">
+              <button id="find-id-btn" class="find-button">아이디 찾기</button>
+              <button id="find-password-btn" class="find-button">비밀번호 찾기</button>
+            </div>
+=======
+          <div id="login-error" class="error-message" style="display: none;"></div>
           <button type="submit" class="login-submit-button">로그인</button>
         </form>
         <div class="login-actions">
           <button type="button" id="signup-btn" class="action-button">회원가입</button>
+          <div class="divider">
+            <span>또는</span>
+          </div>
+          <button type="button" id="google-login-btn" class="google-signin-button">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            구글로 로그인
+          </button>
           <div class="find-actions">
             <button id="find-id-btn" class="find-button">아이디 찾기</button>
             <button id="find-password-btn" class="find-button">비밀번호 찾기</button>
+>>>>>>> b33d3dc01cb5bb5e1ba0ffd616a8e593cb1573f0
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 회원가입 팝업 -->
-    <div id="signup-popup" class="signup-popup">
-      <div class="signup-popup-content">
-        <div class="login-popup-header">
-          <h2>회원가입</h2>
-          <button id="close-signup-popup" class="close-button">×</button>
+      <div id="signup-popup" class="signup-popup">
+        <div class="signup-popup-content">
+          <div class="login-popup-header">
+            <h2>회원가입</h2>
+            <button id="close-signup-popup" class="close-button">×</button>
+          </div>
+          <form id="signup-form" class="login-form">
+            <div class="form-group">
+              <label for="signup-email">이메일</label>
+              <input type="email" id="signup-email" name="email" required />
+            </div>
+            <div class="form-group">
+              <label for="signup-password">비밀번호</label>
+              <input type="password" id="signup-password" name="password" required minlength="6" />
+              <span class="hint">비밀번호는 최소 6자 이상이어야 합니다.</span>
+            </div>
+            <div class="form-group">
+              <label for="signup-password-confirm">비밀번호 확인</label>
+              <input type="password" id="signup-password-confirm" name="password-confirm" required />
+            </div>
+            <div id="signup-error" class="error-message" style="display: none;"></div>
+            <div id="signup-success" class="success-message" style="display: none;"></div>
+            <button type="submit" class="login-submit-button" id="signup-submit-btn">회원가입</button>
+
+            <div class="divider">
+              <span>또는</span>
+            </div>
+
+            <button type="button" id="google-signup-btn" class="google-signin-button">
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              구글로 회원가입
+            </button>
+          </form>
         </div>
+<<<<<<< HEAD
+=======
         <form id="signup-form" class="login-form">
+          <div class="form-group">
+            <label for="signup-name">이름</label>
+            <input type="text" id="signup-name" name="name" required />
+          </div>
           <div class="form-group">
             <label for="signup-email">이메일</label>
             <input type="email" id="signup-email" name="email" required />
@@ -362,16 +581,15 @@
             구글로 회원가입
           </button>
         </form>
+>>>>>>> b33d3dc01cb5bb5e1ba0ffd616a8e593cb1573f0
       </div>
-    </div>
 
-      <!-- 숙제 업로드 및 검사 섹션 -->
       <section class="card">
         <h2>숙제 사진 업로드</h2>
         <form id="upload-form">
           <label class="upload-box" for="photo">
             <strong>사진 선택</strong>
-            <p class="hint">PNG, JPG, WEBP, PDF 파일을 업로드할 수 있어요.</p>
+            <p class="hint">PNG, JPG, WEBP, PDF 파일만 업로드할 수 있어요</p>
             <input
               id="photo"
               name="photo"
@@ -385,25 +603,102 @@
         <div class="upload-preview" id="upload-preview">
           <img id="local-preview-image" alt="선택한 숙제 이미지 미리보기" />
           <iframe id="local-preview-pdf" title="선택한 숙제 PDF 미리보기"></iframe>
-          <p class="hint" id="local-preview-hint">제출 전에 선택한 파일 미리보기가 표시됩니다.</p>
+          <p class="hint" id="local-preview-hint">제출 전에 선택한 파일 미리보기가 표시됩니다</p>
           <p class="file-meta" id="local-file-meta"></p>
         </div>
         <div class="result" id="result">
-          <p class="hint">아직 제출된 결과가 없어요.</p>
+          <p class="hint">아직 제출된 결과가 없어요</p>
         </div>
       </section>
 
-      <!-- 최근 제출 기록 및 미리보기 섹션 -->
-      <section class="card split">
-        <div>
-          <h2>최근 제출 기록</h2>
-          <ul class="history" id="history"></ul>
+      <section class="card calendar-card">
+        <div class="calendar-header">
+          <div>
+            <h2>제출 기록 캘린더</h2>
+            <p class="hint">일/주/월로 제출 기록과 달성률을 확인하세요.</p>
+          </div>
+          <div class="calendar-controls">
+            <div class="calendar-tabs">
+              <button type="button" class="calendar-tab active" data-view="day">일</button>
+              <button type="button" class="calendar-tab" data-view="week">주</button>
+              <button type="button" class="calendar-tab" data-view="month">월</button>
+            </div>
+            <div class="calendar-nav">
+              <button type="button" class="calendar-nav-button" data-shift="-1" aria-label="이전">‹</button>
+              <span id="calendar-label" class="calendar-label"></span>
+              <button type="button" class="calendar-nav-button" data-shift="1" aria-label="다음">›</button>
+              <button type="button" id="calendar-today" class="calendar-today">오늘</button>
+            </div>
+          </div>
         </div>
-        <div class="preview">
-          <img id="preview-image" alt="최근 업로드 이미지 미리보기" />
-          <iframe id="preview-pdf" title="최근 업로드 PDF 미리보기"></iframe>
-          <a class="file-link" id="preview-link" target="_blank" rel="noopener">파일 열기</a>
-          <p class="hint" id="preview-hint">이미지 또는 PDF가 업로드되면 미리보기가 표시됩니다.</p>
+
+        <div class="calendar-panels">
+          <div class="calendar-panel active" data-view="day">
+            <div class="day-summary">
+              <div>
+                <p class="day-date" id="day-date"></p>
+                <p class="hint" id="day-subtitle">선택한 날짜의 제출 기록을 보여줍니다.</p>
+              </div>
+              <div class="day-badges">
+                <span class="status-pill neutral" id="day-status">제출 없음</span>
+                <span class="rate-pill" id="day-rate">달성률 0%</span>
+              </div>
+            </div>
+
+            <div class="day-layout">
+              <div class="day-column plan-column">
+                <h3>설정한 계획</h3>
+                <ul class="plan-list" id="day-goal-list"></ul>
+              </div>
+              <div class="day-column submission-column">
+                <h3>제출 기록</h3>
+                <ul class="submission-list" id="day-submission-list"></ul>
+              </div>
+              <div class="preview calendar-preview">
+                <img id="preview-image" alt="최근 업로드 이미지 미리보기" />
+                <iframe id="preview-pdf" title="최근 업로드 PDF 미리보기"></iframe>
+                <a class="file-link" id="preview-link" target="_blank" rel="noopener">파일 열기</a>
+                <p class="hint" id="preview-hint">이미지 또는 PDF가 업로드되면 미리보기가 표시됩니다</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="calendar-panel" data-view="week">
+            <div class="week-summary">
+              <div class="metric-card">
+                <p class="metric-label">주간 계획 수</p>
+                <p class="metric-value" id="week-plan-count">0</p>
+              </div>
+              <div class="metric-card">
+                <p class="metric-label">달성한 계획</p>
+                <p class="metric-value" id="week-achieved-count">0</p>
+              </div>
+              <div class="metric-card">
+                <p class="metric-label">달성률</p>
+                <p class="metric-value" id="week-achievement-rate">0%</p>
+              </div>
+            </div>
+            <div class="week-grid" id="week-grid"></div>
+          </div>
+
+          <div class="calendar-panel" data-view="month">
+            <div class="month-weekdays">
+              <span>월</span>
+              <span>화</span>
+              <span>수</span>
+              <span>목</span>
+              <span>금</span>
+              <span>토</span>
+              <span>일</span>
+            </div>
+            <div class="month-grid" id="month-grid"></div>
+            <div class="month-legend">
+              <span class="legend-item rate-high">80% 이상</span>
+              <span class="legend-item rate-mid">50~79%</span>
+              <span class="legend-item rate-low">1~49%</span>
+              <span class="legend-item rate-zero">0%</span>
+            </div>
+          </div>
         </div>
       </section>
     </div>
