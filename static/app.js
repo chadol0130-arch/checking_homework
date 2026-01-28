@@ -1,6 +1,10 @@
 ﻿import { getApp, getApps, initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
 import {
+  getAuth,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+import {
   getDatabase,
   onValue,
   push,
@@ -23,6 +27,7 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 getAnalytics(app);
 const database = getDatabase(app);
+const auth = getAuth(app);
 
 const form = document.getElementById("upload-form");
 const resultBox = document.getElementById("result");
@@ -66,15 +71,8 @@ const achievementRateText = document.getElementById("achievement-rate");
 const achievementCountText = document.getElementById("achievement-count");
 const achievementBar = document.getElementById("achievement-bar");
 
-const sessionId = (() => {
-  const existing = localStorage.getItem("session_id");
-  if (existing) {
-    return existing;
-  }
-  const created = crypto.randomUUID();
-  localStorage.setItem("session_id", created);
-  return created;
-})();
+let currentUserId = null;
+let dataUnsubscribers = [];
 
 let currentTotalXp = 0;
 let currentLevel = 1;
@@ -95,54 +93,115 @@ const levelClassMap = [
   { threshold: 1, className: "level-1" },
 ];
 
-const sessionRef = ref(database, `sessions/${sessionId}`);
-const submissionsRef = ref(database, `submissions/${sessionId}`);
-const goalsRef = ref(database, `goals/${sessionId}`);
-
-onValue(sessionRef, (snapshot) => {
-  const data = snapshot.val();
-  if (!data) {
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    currentUserId = null;
+    detachDataListeners();
+    resetDataState();
+    setAuthLockedState(true);
     return;
   }
-  currentLevel = data.level ?? 1;
-  currentTotalXp = data.total_xp ?? 0;
-  levelText.textContent = currentLevel ?? "-";
-  experienceText.textContent = currentTotalXp ?? "-";
-  updateAvatar(currentLevel ?? 1);
-  if (typeof data.achievement_rate === "number") {
-    updateAchievementUI(data.achievement_rate, data.achieved_goals ?? 0, data.total_goals ?? 0);
-  }
+
+  currentUserId = user.uid;
+  setAuthLockedState(false);
+  attachUserData(currentUserId);
 });
 
-onValue(submissionsRef, (snapshot) => {
-  const data = snapshot.val() || {};
-  submissionsCache = Object.entries(data).map(([id, entry]) => {
-    const parsedDate = parseIsoDate(entry?.created_at);
-    return {
-      id,
-      ...entry,
-      _parsedDate: parsedDate,
-    };
+function attachUserData(userId) {
+  detachDataListeners();
+  const sessionRef = ref(database, `sessions/${userId}`);
+  const submissionsRef = ref(database, `submissions/${userId}`);
+  const goalsRef = ref(database, `goals/${userId}`);
+
+  const unsubSession = onValue(sessionRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data) {
+      currentLevel = 1;
+      currentTotalXp = 0;
+      levelText.textContent = "-";
+      experienceText.textContent = "-";
+      updateAvatar(1);
+      updateAchievementUI(0, 0, 0);
+      return;
+    }
+    currentLevel = data.level ?? 1;
+    currentTotalXp = data.total_xp ?? 0;
+    levelText.textContent = currentLevel ?? "-";
+    experienceText.textContent = currentTotalXp ?? "-";
+    updateAvatar(currentLevel ?? 1);
+    if (typeof data.achievement_rate === "number") {
+      updateAchievementUI(data.achievement_rate, data.achieved_goals ?? 0, data.total_goals ?? 0);
+    }
   });
-  submissionsCache.sort(
-    (a, b) => (b._parsedDate?.getTime() ?? 0) - (a._parsedDate?.getTime() ?? 0)
-  );
-  submissionsByDay = groupSubmissionsByDay(submissionsCache);
-  renderCalendar();
-});
 
-onValue(goalsRef, (snapshot) => {
-  const data = snapshot.val() || {};
-  goalsCache = {
-    daily: data.daily || {},
-    weekly: data.weekly || {},
-    monthly: data.monthly || {},
-  };
+  const unsubSubmissions = onValue(submissionsRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    submissionsCache = Object.entries(data).map(([id, entry]) => {
+      const parsedDate = parseIsoDate(entry?.created_at);
+      return {
+        id,
+        ...entry,
+        _parsedDate: parsedDate,
+      };
+    });
+    submissionsCache.sort(
+      (a, b) => (b._parsedDate?.getTime() ?? 0) - (a._parsedDate?.getTime() ?? 0)
+    );
+    submissionsByDay = groupSubmissionsByDay(submissionsCache);
+    renderCalendar();
+  });
+
+  const unsubGoals = onValue(goalsRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    goalsCache = {
+      daily: data.daily || {},
+      weekly: data.weekly || {},
+      monthly: data.monthly || {},
+    };
+    renderGoalLists(goalsCache);
+    const totals = calculateGoalTotals(goalsCache);
+    updateAchievementUI(totals.rate, totals.achieved, totals.total);
+    renderCalendar();
+  });
+
+  dataUnsubscribers = [unsubSession, unsubSubmissions, unsubGoals];
+}
+
+function detachDataListeners() {
+  dataUnsubscribers.forEach((unsub) => {
+    if (typeof unsub === "function") {
+      unsub();
+    }
+  });
+  dataUnsubscribers = [];
+}
+
+function resetDataState() {
+  currentTotalXp = 0;
+  currentLevel = 1;
+  goalsCache = { daily: {}, weekly: {}, monthly: {} };
+  submissionsCache = [];
+  submissionsByDay = {};
+  levelText.textContent = "-";
+  experienceText.textContent = "-";
+  updateAvatar(1);
   renderGoalLists(goalsCache);
-  const totals = calculateGoalTotals(goalsCache);
-  updateAchievementUI(totals.rate, totals.achieved, totals.total);
+  updateAchievementUI(0, 0, 0);
   renderCalendar();
-});
+  resetServerPreview();
+}
+
+function setAuthLockedState(isLocked) {
+  const submitButton = form?.querySelector("button[type=\"submit\"]");
+  if (goalInput) goalInput.disabled = isLocked;
+  if (goalAddBtn) goalAddBtn.disabled = isLocked;
+  if (fileInput) fileInput.disabled = isLocked;
+  if (submitButton) submitButton.disabled = isLocked;
+
+  if (isLocked && resultBox) {
+    resultBox.innerHTML = "<p class=\"hint\">로그인 후 숙제를 업로드할 수 있습니다.</p>";
+  }
+}
 
 goalPeriodButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -152,6 +211,10 @@ goalPeriodButtons.forEach((button) => {
 
 if (goalAddBtn) {
   goalAddBtn.addEventListener("click", async () => {
+    if (!currentUserId) {
+      showGoalWarning("로그인 후 목표를 설정할 수 있습니다.");
+      return;
+    }
     const text = goalInput?.value?.trim();
     if (!text) {
       showGoalWarning("목표 내용을 입력해 주세요.");
@@ -163,7 +226,7 @@ if (goalAddBtn) {
     }
 
     try {
-      const goalRef = push(ref(database, `goals/${sessionId}/${activeGoalPeriod}`));
+      const goalRef = push(ref(database, `goals/${currentUserId}/${activeGoalPeriod}`));
       await set(goalRef, {
         text,
         achieved: false,
@@ -236,6 +299,10 @@ fileInput.addEventListener("change", () => {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!currentUserId) {
+    resultBox.innerHTML = "<p class=\"error\">로그인 후 제출할 수 있습니다.</p>";
+    return;
+  }
   if (!fileInput.files.length) {
     return;
   }
@@ -289,7 +356,7 @@ form.addEventListener("submit", async (event) => {
     }
 
     const updates = {
-      [`sessions/${sessionId}`]: {
+      [`sessions/${currentUserId}`]: {
         level,
         total_xp: totalXp,
         achievement_rate: achievementRate,
@@ -299,13 +366,13 @@ form.addEventListener("submit", async (event) => {
       },
     };
     for (const entry of matchResult.newlyAchieved) {
-      updates[`goals/${sessionId}/${entry.period}/${entry.id}/achieved`] = true;
-      updates[`goals/${sessionId}/${entry.period}/${entry.id}/achieved_at`] =
+      updates[`goals/${currentUserId}/${entry.period}/${entry.id}/achieved`] = true;
+      updates[`goals/${currentUserId}/${entry.period}/${entry.id}/achieved_at`] =
         payload.submitted_at;
     }
     await update(ref(database), updates);
 
-    const submissionRef = push(ref(database, `submissions/${sessionId}`));
+    const submissionRef = push(ref(database, `submissions/${currentUserId}`));
     await set(submissionRef, {
       gained_xp: gainedXp,
       achievement_rate: achievementRate,
