@@ -12,6 +12,8 @@ import {
   set,
   update,
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+import AvatarEngine from "./avatar/AvatarEngine.js";
+import { resolveAvatarSources, setCharacterStyleClass } from "./avatar/avatarConfig.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyChYb-nd-jhtkrCub8thxAU1xQHrQ2Zk-A",
@@ -34,6 +36,7 @@ const resultBox = document.getElementById("result");
 const levelText = document.getElementById("level");
 const experienceText = document.getElementById("experience");
 const avatar = document.getElementById("avatar");
+const avatarCanvas = document.getElementById("paperdoll-avatar");
 const previewImage = document.getElementById("preview-image");
 const previewPdf = document.getElementById("preview-pdf");
 const previewLink = document.getElementById("preview-link");
@@ -60,10 +63,15 @@ const weekAchievedCount = document.getElementById("week-achieved-count");
 const weekAchievementRate = document.getElementById("week-achievement-rate");
 const weekGrid = document.getElementById("week-grid");
 const monthGrid = document.getElementById("month-grid");
-const goalInput = document.getElementById("goal-input");
-const goalAddBtn = document.getElementById("goal-add-btn");
-const goalWarning = document.getElementById("goal-warning");
-const goalPeriodButtons = document.querySelectorAll(".period-button");
+const dayGoalInput = document.getElementById("day-goal-input");
+const dayGoalAddBtn = document.getElementById("day-goal-add-btn");
+const dayGoalWarning = document.getElementById("day-goal-warning");
+const weekGoalInput = document.getElementById("week-goal-input");
+const weekGoalAddBtn = document.getElementById("week-goal-add-btn");
+const weekGoalWarning = document.getElementById("week-goal-warning");
+const monthGoalInput = document.getElementById("month-goal-input");
+const monthGoalAddBtn = document.getElementById("month-goal-add-btn");
+const monthGoalWarning = document.getElementById("month-goal-warning");
 const dailyGoalList = document.getElementById("goal-list-daily");
 const weeklyGoalList = document.getElementById("goal-list-weekly");
 const monthlyGoalList = document.getElementById("goal-list-monthly");
@@ -72,6 +80,7 @@ const achievementCountText = document.getElementById("achievement-count");
 const achievementBar = document.getElementById("achievement-bar");
 
 let currentUserId = null;
+let currentUserEmail = null;
 let dataUnsubscribers = [];
 
 let currentTotalXp = 0;
@@ -87,6 +96,11 @@ let submissionsByDay = {};
 let activeCalendarView = "day";
 let selectedDate = startOfDay(new Date());
 let currentCharacterStyle = "classic";
+let avatarEngine = null;
+let lastAvatarXp = null;
+let lastAvatarLevel = null;
+let lastAvatarSourceKey = null;
+let isAuthLocked = false;
 
 const levelClassMap = [
   { threshold: 5, className: "level-5" },
@@ -94,9 +108,12 @@ const levelClassMap = [
   { threshold: 1, className: "level-1" },
 ];
 
+initAvatarEngine();
+
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     currentUserId = null;
+    currentUserEmail = null;
     detachDataListeners();
     resetDataState();
     setAuthLockedState(true);
@@ -104,6 +121,8 @@ onAuthStateChanged(auth, (user) => {
   }
 
   currentUserId = user.uid;
+  currentUserEmail = user.email ? user.email.toLowerCase() : null;
+  lastAvatarSourceKey = null;
   setAuthLockedState(false);
   attachUserData(currentUserId);
 });
@@ -122,6 +141,8 @@ function attachUserData(userId) {
       levelText.textContent = "-";
       experienceText.textContent = "-";
       updateAvatar(1);
+      lastAvatarSourceKey = null;
+      syncAvatarState(1, 0);
       updateAchievementUI(0, 0, 0);
       return;
     }
@@ -130,6 +151,7 @@ function attachUserData(userId) {
     levelText.textContent = currentLevel ?? "-";
     experienceText.textContent = currentTotalXp ?? "-";
     updateAvatar(currentLevel ?? 1);
+    syncAvatarState(currentLevel ?? 1, currentTotalXp ?? 0);
     if (typeof data.achievement_rate === "number") {
       updateAchievementUI(data.achievement_rate, data.achieved_goals ?? 0, data.total_goals ?? 0);
     }
@@ -159,8 +181,9 @@ function attachUserData(userId) {
       weekly: data.weekly || {},
       monthly: data.monthly || {},
     };
+    backfillGoalKeys(userId, goalsCache);
     renderGoalLists(goalsCache);
-    const totals = calculateGoalTotals(goalsCache);
+    const totals = calculateGoalTotals(goalsCache, new Date());
     updateAchievementUI(totals.rate, totals.achieved, totals.total);
     renderCalendar();
   });
@@ -170,6 +193,9 @@ function attachUserData(userId) {
     const data = snapshot.val() || {};
     currentCharacterStyle = data.character_style || "classic";
     updateAvatar(currentLevel ?? 1);
+    applyAvatarCanvasStyle(currentCharacterStyle);
+    lastAvatarSourceKey = null;
+    syncAvatarState(currentLevel ?? 1, currentTotalXp ?? 0);
   });
 
   dataUnsubscribers = [unsubSession, unsubSubmissions, unsubGoals, unsubProfile];
@@ -191,9 +217,12 @@ function resetDataState() {
   submissionsCache = [];
   submissionsByDay = {};
   currentCharacterStyle = "classic";
+  lastAvatarSourceKey = null;
   levelText.textContent = "-";
   experienceText.textContent = "-";
   updateAvatar(1);
+  applyAvatarCanvasStyle(currentCharacterStyle);
+  syncAvatarState(1, 0);
   renderGoalLists(goalsCache);
   updateAchievementUI(0, 0, 0);
   renderCalendar();
@@ -201,9 +230,14 @@ function resetDataState() {
 }
 
 function setAuthLockedState(isLocked) {
+  isAuthLocked = isLocked;
   const submitButton = form?.querySelector("button[type=\"submit\"]");
-  if (goalInput) goalInput.disabled = isLocked;
-  if (goalAddBtn) goalAddBtn.disabled = isLocked;
+  if (dayGoalInput) dayGoalInput.disabled = isLocked;
+  if (dayGoalAddBtn) dayGoalAddBtn.disabled = isLocked;
+  if (weekGoalInput) weekGoalInput.disabled = isLocked;
+  if (weekGoalAddBtn) weekGoalAddBtn.disabled = isLocked;
+  if (monthGoalInput) monthGoalInput.disabled = isLocked;
+  if (monthGoalAddBtn) monthGoalAddBtn.disabled = isLocked;
   if (fileInput) fileInput.disabled = isLocked;
   if (submitButton) submitButton.disabled = isLocked;
 
@@ -212,49 +246,38 @@ function setAuthLockedState(isLocked) {
   }
 }
 
-goalPeriodButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    setActiveGoalPeriod(button.dataset.period || "daily");
-  });
-});
-
-if (goalAddBtn) {
-  goalAddBtn.addEventListener("click", async () => {
-    if (!currentUserId) {
-      showGoalWarning("로그인 후 목표를 설정할 수 있습니다.");
-      return;
-    }
-    const text = goalInput?.value?.trim();
-    if (!text) {
-      showGoalWarning("목표 내용을 입력해 주세요.");
-      return;
-    }
-    if (activeGoalPeriod === "monthly" && Object.keys(goalsCache.monthly || {}).length > 0) {
-      showGoalWarning("월 목표는 1개만 설정할 수 있습니다.");
-      return;
-    }
-
-    try {
-      const goalRef = push(ref(database, `goals/${currentUserId}/${activeGoalPeriod}`));
-      await set(goalRef, {
-        text,
-        achieved: false,
-        created_at: new Date().toISOString(),
-      });
-      if (goalInput) goalInput.value = "";
-      showGoalWarning("");
-    } catch (error) {
-      console.error("목표 저장 오류:", error);
-      showGoalWarning("목표 저장에 실패했습니다.");
+if (dayGoalAddBtn) {
+  dayGoalAddBtn.addEventListener("click", () => addGoalForPeriod("daily"));
+}
+if (dayGoalInput) {
+  dayGoalInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      dayGoalAddBtn?.click();
     }
   });
 }
 
-if (goalInput) {
-  goalInput.addEventListener("keydown", (event) => {
+if (weekGoalAddBtn) {
+  weekGoalAddBtn.addEventListener("click", () => addGoalForPeriod("weekly"));
+}
+if (weekGoalInput) {
+  weekGoalInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      goalAddBtn?.click();
+      weekGoalAddBtn?.click();
+    }
+  });
+}
+
+if (monthGoalAddBtn) {
+  monthGoalAddBtn.addEventListener("click", () => addGoalForPeriod("monthly"));
+}
+if (monthGoalInput) {
+  monthGoalInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      monthGoalAddBtn?.click();
     }
   });
 }
@@ -334,7 +357,7 @@ form.addEventListener("submit", async (event) => {
 
     const photoText = fileInput.files[0]?.name || "";
     const matchResult = evaluateGoalsAgainstText(photoText, goalsCache);
-    const totalsBefore = calculateGoalTotals(goalsCache);
+    const totalsBefore = calculateGoalTotals(goalsCache, new Date());
     const achievedAfter = totalsBefore.achieved + matchResult.newlyAchieved.length;
     const totalGoals = totalsBefore.total;
     const achievementRate = totalGoals
@@ -439,6 +462,9 @@ function resetLocalPreview() {
 }
 
 function updateAvatar(level) {
+  if (!avatar) {
+    return;
+  }
   avatar.className = "avatar";
   if (currentCharacterStyle) {
     avatar.classList.add(`character-${currentCharacterStyle}`);
@@ -451,24 +477,228 @@ function updateAvatar(level) {
   }
 }
 
+function applyAvatarCanvasStyle(style) {
+  if (!avatarCanvas) {
+    return;
+  }
+  setCharacterStyleClass(avatarCanvas, style);
+}
+
+function initAvatarEngine() {
+  if (!avatarCanvas) {
+    return;
+  }
+  avatarEngine = new AvatarEngine({
+    canvasId: "paperdoll-avatar",
+    frameW: 96,
+    frameH: 96,
+    scale: 2,
+    autoScale: true,
+  });
+  avatarEngine
+    .load({
+      bodySrc: "/static/sprites/body_base.png",
+      topSrc: "/static/sprites/top_basic.png",
+      bottomSrc: "/static/sprites/bottom_basic.png",
+    })
+    .then(() => {
+      syncAvatarState(currentLevel ?? 1, currentTotalXp ?? 0);
+      applyAvatarCanvasStyle(currentCharacterStyle);
+    })
+    .catch((error) => {
+      console.error("아바타 로딩 실패:", error);
+    });
+}
+
+function syncAvatarState(level, totalXp) {
+  if (!avatarEngine) {
+    return;
+  }
+  const parsedLevel = Number(level);
+  const parsedXp = Number(totalXp);
+  const safeLevel = Number.isFinite(parsedLevel) ? parsedLevel : 1;
+  const safeXp = Number.isFinite(parsedXp) ? parsedXp : 0;
+  const prevXp = lastAvatarXp;
+  const prevLevel = lastAvatarLevel;
+
+  const customSources = resolveAvatarSources({
+    userEmail: currentUserEmail,
+    level: safeLevel,
+    style: currentCharacterStyle,
+  });
+  if (customSources) {
+    const sourceKey = `${customSources.bodySrc || ""}`;
+    if (sourceKey && sourceKey !== lastAvatarSourceKey) {
+      lastAvatarSourceKey = sourceKey;
+      avatarEngine
+        .setOutfit({
+          bodySrc: customSources.bodySrc,
+          topSrc: null,
+          bottomSrc: null,
+          frameW: customSources.frameW,
+          frameH: customSources.frameH,
+          frameCount: customSources.frameCount,
+        })
+        .catch((error) => {
+          console.error("아바타 로딩 실패:", error);
+        });
+    }
+  } else {
+    if (lastAvatarSourceKey) {
+      avatarEngine
+        .setOutfit({ bodySrc: "/static/sprites/body_base.png" })
+        .catch((error) => {
+          console.error("아바타 로딩 실패:", error);
+        });
+    }
+    lastAvatarSourceKey = null;
+    avatarEngine.setLevel(safeLevel);
+  }
+  avatarEngine.setXp(safeXp);
+
+  if (prevXp !== null && safeXp > prevXp) {
+    avatarEngine.playCheer();
+  } else if (prevLevel !== null && safeLevel > prevLevel) {
+    avatarEngine.playCheer();
+  }
+
+  lastAvatarXp = safeXp;
+  lastAvatarLevel = safeLevel;
+}
+
 function setActiveGoalPeriod(period) {
   const allowed = ["daily", "weekly", "monthly"];
   activeGoalPeriod = allowed.includes(period) ? period : "daily";
-  goalPeriodButtons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.period === activeGoalPeriod);
-  });
 }
 
-function showGoalWarning(message) {
-  if (!goalWarning) {
+function showGoalWarning(target, message) {
+  if (!target) {
     return;
   }
   if (message) {
-    goalWarning.textContent = message;
-    goalWarning.style.display = "block";
+    target.textContent = message;
+    target.style.display = "block";
   } else {
-    goalWarning.textContent = "";
-    goalWarning.style.display = "none";
+    target.textContent = "";
+    target.style.display = "none";
+  }
+}
+
+function getGoalControls(period) {
+  if (period === "weekly") {
+    return { input: weekGoalInput, button: weekGoalAddBtn, warning: weekGoalWarning };
+  }
+  if (period === "monthly") {
+    return { input: monthGoalInput, button: monthGoalAddBtn, warning: monthGoalWarning };
+  }
+  return { input: dayGoalInput, button: dayGoalAddBtn, warning: dayGoalWarning };
+}
+
+function getPeriodGoalCount(period, referenceDate) {
+  const refDayKey = toDayKey(referenceDate);
+  const refWeekKey = getWeekKey(referenceDate);
+  const refMonthKey = getMonthKey(referenceDate);
+  let count = 0;
+  for (const goal of Object.values(goalsCache[period] || {})) {
+    const { dayKey, weekKey, monthKey } = getGoalDateKeys(goal);
+    if (period === "daily" && dayKey === refDayKey) {
+      count += 1;
+    } else if (period === "weekly" && weekKey === refWeekKey) {
+      count += 1;
+    } else if (period === "monthly" && monthKey === refMonthKey) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function updateGoalInputState() {
+  const referenceDate = selectedDate || new Date();
+  const dailyControls = getGoalControls("daily");
+  const weeklyControls = getGoalControls("weekly");
+  const monthlyControls = getGoalControls("monthly");
+
+  if (dailyControls.input) {
+    dailyControls.input.disabled = isAuthLocked;
+  }
+  if (dailyControls.button) {
+    dailyControls.button.disabled = isAuthLocked;
+  }
+  showGoalWarning(dailyControls.warning, "");
+
+  const weeklyCount = getPeriodGoalCount("weekly", referenceDate);
+  const weeklyLocked = isAuthLocked || weeklyCount >= 1;
+  if (weeklyControls.input) {
+    weeklyControls.input.disabled = weeklyLocked;
+  }
+  if (weeklyControls.button) {
+    weeklyControls.button.disabled = weeklyLocked;
+  }
+  showGoalWarning(
+    weeklyControls.warning,
+    weeklyLocked && !isAuthLocked ? "주 목표는 1개만 설정할 수 있습니다." : ""
+  );
+
+  const monthlyCount = getPeriodGoalCount("monthly", referenceDate);
+  const monthlyLocked = isAuthLocked || monthlyCount >= 1;
+  if (monthlyControls.input) {
+    monthlyControls.input.disabled = monthlyLocked;
+  }
+  if (monthlyControls.button) {
+    monthlyControls.button.disabled = monthlyLocked;
+  }
+  showGoalWarning(
+    monthlyControls.warning,
+    monthlyLocked && !isAuthLocked ? "월 목표는 1개만 설정할 수 있습니다." : ""
+  );
+}
+
+async function addGoalForPeriod(period) {
+  const controls = getGoalControls(period);
+  if (!currentUserId) {
+    showGoalWarning(controls.warning, "로그인 후 목표를 설정할 수 있습니다.");
+    return;
+  }
+  const text = controls.input?.value?.trim();
+  if (!text) {
+    showGoalWarning(controls.warning, "목표 내용을 입력해 주세요.");
+    return;
+  }
+
+  const referenceDate = selectedDate || new Date();
+  const limitReached =
+    (period === "weekly" || period === "monthly") &&
+    getPeriodGoalCount(period, referenceDate) >= 1;
+  if (limitReached) {
+    showGoalWarning(
+      controls.warning,
+      period === "weekly" ? "주 목표는 1개만 설정할 수 있습니다." : "월 목표는 1개만 설정할 수 있습니다."
+    );
+    updateGoalInputState();
+    return;
+  }
+
+  try {
+    const dayKey = toDayKey(referenceDate);
+    const weekKey = getWeekKey(referenceDate);
+    const monthKey = getMonthKey(referenceDate);
+    const goalRef = push(ref(database, `goals/${currentUserId}/${period}`));
+    await set(goalRef, {
+      text,
+      achieved: false,
+      created_at: new Date().toISOString(),
+      date_key: dayKey,
+      week_key: weekKey,
+      month_key: monthKey,
+    });
+    if (controls.input) {
+      controls.input.value = "";
+    }
+    showGoalWarning(controls.warning, "");
+    updateGoalInputState();
+  } catch (error) {
+    console.error("목표 저장 오류:", error);
+    showGoalWarning(controls.warning, "목표 저장에 실패했습니다.");
   }
 }
 
@@ -501,11 +731,26 @@ function renderGoalList(listElement, goals, label) {
   }
 }
 
-function calculateGoalTotals(goalsData) {
+function calculateGoalTotals(goalsData, referenceDate = null) {
   let total = 0;
   let achieved = 0;
+  const refDayKey = referenceDate ? toDayKey(referenceDate) : null;
+  const refWeekKey = referenceDate ? getWeekKey(referenceDate) : null;
+  const refMonthKey = referenceDate ? getMonthKey(referenceDate) : null;
   for (const period of ["daily", "weekly", "monthly"]) {
     for (const goal of Object.values(goalsData[period] || {})) {
+      if (referenceDate) {
+        const { dayKey, weekKey, monthKey } = getGoalDateKeys(goal);
+        if (period === "daily" && dayKey !== refDayKey) {
+          continue;
+        }
+        if (period === "weekly" && weekKey !== refWeekKey) {
+          continue;
+        }
+        if (period === "monthly" && monthKey !== refMonthKey) {
+          continue;
+        }
+      }
       total += 1;
       if (goal.achieved) {
         achieved += 1;
@@ -543,6 +788,9 @@ const successRateThreshold = 70;
 function setCalendarView(view) {
   const allowed = ["day", "week", "month"];
   activeCalendarView = allowed.includes(view) ? view : "day";
+  setActiveGoalPeriod(
+    activeCalendarView === "week" ? "weekly" : activeCalendarView === "month" ? "monthly" : "daily"
+  );
   calendarViewButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.view === activeCalendarView);
   });
@@ -573,6 +821,7 @@ function renderCalendar() {
   renderDayView();
   renderWeekView();
   renderMonthView();
+  updateGoalInputState();
 }
 
 function updateCalendarLabel() {
@@ -639,6 +888,9 @@ function renderDayGoals(goalsData) {
     return;
   }
   dayGoalList.innerHTML = "";
+  const selectedDayKey = toDayKey(selectedDate);
+  const selectedWeekKey = getWeekKey(selectedDate);
+  const selectedMonthKey = getMonthKey(selectedDate);
   const periodLabels = {
     daily: "일",
     weekly: "주",
@@ -647,6 +899,18 @@ function renderDayGoals(goalsData) {
   const entries = [];
   for (const period of ["daily", "weekly", "monthly"]) {
     for (const goal of Object.values(goalsData[period] || {})) {
+      const { dayKey, weekKey, monthKey } = getGoalDateKeys(goal);
+
+      if (period === "daily" && dayKey !== selectedDayKey) {
+        continue;
+      }
+      if (period === "weekly" && weekKey !== selectedWeekKey) {
+        continue;
+      }
+      if (period === "monthly" && monthKey !== selectedMonthKey) {
+        continue;
+      }
+
       entries.push({ ...goal, period });
     }
   }
@@ -765,13 +1029,19 @@ function renderWeekView() {
   if (!weekGrid || !weekPlanCount || !weekAchievedCount || !weekAchievementRate) {
     return;
   }
-  const weekStart = startOfWeek(selectedDate);
-  const weekEnd = addDays(weekStart, 6);
+  const weekDays = getWeekDays(selectedDate);
+  const weekDayKeys = new Set(weekDays.map((day) => toDayKey(day)));
+  const selectedWeekKey = getWeekKey(selectedDate);
+  const selectedMonthKey = getMonthKey(selectedDate);
   const weekGoals = [];
   for (const period of ["daily", "weekly", "monthly"]) {
     for (const goal of Object.values(goalsCache[period] || {})) {
-      const createdDate = parseIsoDate(goal.created_at);
-      if (createdDate && isDateInRange(createdDate, weekStart, weekEnd)) {
+      const { dayKey, weekKey, monthKey } = getGoalDateKeys(goal);
+      if (period === "daily" && dayKey && weekDayKeys.has(dayKey)) {
+        weekGoals.push(goal);
+      } else if (period === "weekly" && weekKey === selectedWeekKey) {
+        weekGoals.push(goal);
+      } else if (period === "monthly" && monthKey === selectedMonthKey) {
         weekGoals.push(goal);
       }
     }
@@ -786,7 +1056,6 @@ function renderWeekView() {
   weekAchievementRate.textContent = `${rate}%`;
 
   weekGrid.innerHTML = "";
-  const weekDays = getWeekDays(selectedDate);
   for (const day of weekDays) {
     const key = toDayKey(day);
     const stats = getDayStats(key);
@@ -925,6 +1194,26 @@ function parseIsoDate(value) {
   return parsed;
 }
 
+function getGoalDateKeys(goal) {
+  const createdDate = parseIsoDate(goal?.created_at);
+  return {
+    dayKey: goal?.date_key || (createdDate ? toDayKey(createdDate) : null),
+    weekKey: goal?.week_key || (createdDate ? getWeekKey(createdDate) : null),
+    monthKey: goal?.month_key || (createdDate ? getMonthKey(createdDate) : null),
+  };
+}
+
+function getWeekKey(date) {
+  const start = startOfWeek(date);
+  return toDayKey(start);
+}
+
+function getMonthKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 function toDayKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -969,16 +1258,29 @@ function normalizeText(value) {
     .replace(/[^a-z0-9가-힣]/g, "");
 }
 
-function evaluateGoalsAgainstText(photoText, goalsData) {
+function evaluateGoalsAgainstText(photoText, goalsData, referenceDate = new Date()) {
   const normalizedPhoto = normalizeText(photoText);
   const matchedGoals = [];
   const newlyAchieved = [];
   if (!normalizedPhoto) {
     return { matchedGoals, newlyAchieved };
   }
+  const refDayKey = toDayKey(referenceDate);
+  const refWeekKey = getWeekKey(referenceDate);
+  const refMonthKey = getMonthKey(referenceDate);
   for (const period of ["daily", "weekly", "monthly"]) {
     for (const [id, goal] of Object.entries(goalsData[period] || {})) {
       if (!goal?.text) {
+        continue;
+      }
+      const { dayKey, weekKey, monthKey } = getGoalDateKeys(goal);
+      if (period === "daily" && dayKey !== refDayKey) {
+        continue;
+      }
+      if (period === "weekly" && weekKey !== refWeekKey) {
+        continue;
+      }
+      if (period === "monthly" && monthKey !== refMonthKey) {
         continue;
       }
       const normalizedGoal = normalizeText(goal.text);
@@ -997,5 +1299,35 @@ function evaluateGoalsAgainstText(photoText, goalsData) {
 }
 
 setCalendarView(activeCalendarView);
+
+function backfillGoalKeys(userId, goalsData) {
+  if (!userId || !goalsData) {
+    return;
+  }
+  const updates = {};
+  for (const period of ["daily", "weekly", "monthly"]) {
+    for (const [id, goal] of Object.entries(goalsData[period] || {})) {
+      const createdDate = parseIsoDate(goal.created_at) || new Date();
+      const dayKey = goal.date_key || toDayKey(createdDate);
+      const weekKey = goal.week_key || getWeekKey(createdDate);
+      const monthKey = goal.month_key || getMonthKey(createdDate);
+
+      if (!goal.date_key) {
+        updates[`goals/${userId}/${period}/${id}/date_key`] = dayKey;
+      }
+      if (!goal.week_key) {
+        updates[`goals/${userId}/${period}/${id}/week_key`] = weekKey;
+      }
+      if (!goal.month_key) {
+        updates[`goals/${userId}/${period}/${id}/month_key`] = monthKey;
+      }
+    }
+  }
+  if (Object.keys(updates).length) {
+    update(ref(database), updates).catch((error) => {
+      console.error("목표 키 백필 실패:", error);
+    });
+  }
+}
 
 

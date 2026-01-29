@@ -13,6 +13,8 @@ import {
   update,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+import AvatarEngine from "./avatar/AvatarEngine.js";
+import { resolveAvatarSources, setCharacterStyleClass } from "./avatar/avatarConfig.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyChYb-nd-jhtkrCub8thxAU1xQHrQ2Zk-A",
@@ -43,7 +45,7 @@ const scoreMath = document.getElementById("profile-score-math");
 const scoreSocial = document.getElementById("profile-score-social");
 const scoreScience = document.getElementById("profile-score-science");
 const characterOptions = document.getElementById("character-options");
-const profileAvatar = document.getElementById("profile-avatar");
+const profileAvatarCanvas = document.getElementById("profile-avatar-canvas");
 const topbarUser = document.getElementById("topbar-user");
 
 const passwordForm = document.getElementById("password-form");
@@ -55,10 +57,17 @@ const confirmPasswordInput = document.getElementById("confirm-password");
 
 let currentUid = null;
 let profileUnsub = null;
+let currentUserEmail = null;
+let profileAvatarEngine = null;
+let levelObserver = null;
+
+initProfileAvatarEngine();
+watchDashboardLevel();
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     currentUid = null;
+    currentUserEmail = null;
     detachProfileListener();
     resetProfileForm();
     setProfileLocked(true);
@@ -67,10 +76,12 @@ onAuthStateChanged(auth, (user) => {
   }
 
   currentUid = user.uid;
+  currentUserEmail = user.email ? user.email.toLowerCase() : null;
   setProfileLocked(false);
   updateTopbarUser(resolveNickname(user, null));
   attachProfileListener(currentUid);
   updatePasswordAvailability(user);
+  updateProfileAvatar(getSelectedCharacterStyle());
 });
 
 if (profileForm) {
@@ -263,12 +274,37 @@ function resolveNickname(user, profileData) {
 }
 
 function updateProfileAvatar(style) {
-  if (!profileAvatar) {
+  if (profileAvatarCanvas) {
+    setCharacterStyleClass(profileAvatarCanvas, style);
+  }
+  if (!profileAvatarEngine) {
     return;
   }
-  profileAvatar.className = "avatar";
-  if (style) {
-    profileAvatar.classList.add(`character-${style}`);
+  const level = getDashboardLevel();
+  const sources = resolveAvatarSources({
+    userEmail: currentUserEmail,
+    level,
+    style,
+  });
+  if (sources?.bodySrc) {
+    profileAvatarEngine
+      .setOutfit({
+        bodySrc: sources.bodySrc,
+        topSrc: null,
+        bottomSrc: null,
+        frameW: sources.frameW,
+        frameH: sources.frameH,
+        frameCount: sources.frameCount,
+      })
+      .catch((error) => {
+        console.error("프로필 아바타 로딩 실패:", error);
+      });
+  } else {
+    profileAvatarEngine
+      .setOutfit({ bodySrc: "/static/sprites/body_base.png", topSrc: null, bottomSrc: null })
+      .catch((error) => {
+        console.error("프로필 아바타 로딩 실패:", error);
+      });
   }
 }
 
@@ -284,6 +320,52 @@ function setSelectedCharacterStyle(value) {
   if (option) {
     option.checked = true;
   }
+}
+
+function initProfileAvatarEngine() {
+  if (!profileAvatarCanvas) {
+    return;
+  }
+  profileAvatarEngine = new AvatarEngine({
+    canvasId: "profile-avatar-canvas",
+    frameW: 96,
+    frameH: 96,
+    scale: 2,
+    autoScale: true,
+  });
+  profileAvatarEngine
+    .load({
+      bodySrc: "/static/sprites/body_base.png",
+      topSrc: null,
+      bottomSrc: null,
+    })
+    .then(() => {
+      updateProfileAvatar(getSelectedCharacterStyle());
+    })
+    .catch((error) => {
+      console.error("프로필 아바타 초기화 실패:", error);
+    });
+}
+
+function getDashboardLevel() {
+  const levelText = document.getElementById("level");
+  const parsed = Number(levelText?.textContent);
+  return Number.isFinite(parsed) ? parsed : 1;
+}
+
+function watchDashboardLevel() {
+  const levelText = document.getElementById("level");
+  if (!levelText || levelObserver) {
+    return;
+  }
+  levelObserver = new MutationObserver(() => {
+    updateProfileAvatar(getSelectedCharacterStyle());
+  });
+  levelObserver.observe(levelText, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
 }
 
 function parseNumber(value) {

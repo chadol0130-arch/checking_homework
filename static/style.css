@@ -245,6 +245,35 @@ button:disabled {
   align-items: center;
 }
 
+.paperdoll-canvas {
+  width: min(180px, 60vw);
+  height: min(180px, 60vw);
+  max-width: 220px;
+  max-height: 220px;
+  border-radius: 32px;
+  background: linear-gradient(135deg, #4c6fff, #7d8dff);
+  box-shadow: 0 16px 30px rgba(76, 111, 255, 0.35);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+.paperdoll-canvas.character-classic {
+  filter: none;
+}
+
+.paperdoll-canvas.character-mint {
+  filter: hue-rotate(140deg) saturate(1.1);
+}
+
+.paperdoll-canvas.character-sunset {
+  filter: hue-rotate(-20deg) saturate(1.2) brightness(1.05);
+}
+
+.paperdoll-canvas.character-candy {
+  filter: hue-rotate(60deg) saturate(1.35);
+}
+
 .avatar {
   width: 140px;
   height: 140px;
@@ -1133,9 +1162,11 @@ button:disabled {
   align-items: center;
 }
 
-.profile-avatar .avatar {
+.profile-avatar .paperdoll-canvas {
   width: 96px;
   height: 96px;
+  max-width: 96px;
+  max-height: 96px;
   border-radius: 26px;
 }
 
