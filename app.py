@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import os
+import random
 from datetime import datetime, timezone
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,16 +19,20 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-
-@dataclass(frozen=True)
-class EvaluationResult:
-    score: int
-    feedback: str
+ENCOURAGEMENT_MESSAGES = [
+    "{goal}는 반드시 해낼 줄 알았어!",
+    "잘했어! {goal} 달성 완료!",
+    "오늘도 꾸준함 승리! {goal} 성공!",
+    "멋지다! {goal} 실천했네.",
+    "최고야! {goal} 완료했어.",
+    "한 걸음 더! {goal} 완료!",
+    "{goal} 해냈다! 내일도 화이팅!",
+    "성실함이 빛난다! {goal} 완료!",
+]
 
 
 @app.route("/")
 def index() -> str:
-    # 초기 로딩값은 프론트에서 Firebase 세션으로 갱신됨
     return render_template("index.html", state={"total_xp": 0, "level": 1})
 
 
@@ -37,39 +41,20 @@ def uploaded_file(filename: str):
     return send_from_directory(UPLOAD_DIR, filename)
 
 
-def _score_from_bytes(payload: bytes) -> int:
-    if not payload:
-        return 0
-    digest = hashlib.sha256(payload).hexdigest()
-    return int(digest[:2], 16) % 101
-
-
-def _feedback_for_score(score: int) -> str:
-    if score >= 90:
-        return "완벽해요! 풀이 과정도 아주 명확합니다."
-    if score >= 70:
-        return "좋아요! 몇 군데만 조금 더 확인하면 더 좋아질 거예요."
-    if score >= 50:
-        return "기본은 잘했어요. 핵심 공식을 다시 한번 확인해 봅시다."
-    return "조금만 더 집중해서 풀어 볼까요? 힌트는 차근차근 확인해요."
-
-
 def _allowed_file(filename: str) -> bool:
     _, ext = os.path.splitext(filename.lower())
     return ext in {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
-
-def _evaluate_homework_bytes(payload: bytes) -> EvaluationResult:
-    score = _score_from_bytes(payload)
-    feedback = _feedback_for_score(score)
-    return EvaluationResult(score=score, feedback=feedback)
 
 
 def _make_unique_filename(original_name: str) -> str:
     safe = secure_filename(original_name) or "upload"
     stem, ext = os.path.splitext(safe)
-    # 간단 유니크: 파일 내용 해시 일부 + 원래 확장자
-    # (payload 해시를 쓰고 싶다면 upload에서 만든 digest를 넘겨도 됨)
     return f"{stem}_{hashlib.sha1(os.urandom(16)).hexdigest()[:10]}{ext}"
+
+
+def _pick_feedback(goal_text: str | None) -> str:
+    goal = goal_text.strip() if goal_text else "오늘의 목표"
+    return random.choice(ENCOURAGEMENT_MESSAGES).format(goal=goal)
 
 
 @app.route("/upload", methods=["POST"])
@@ -84,14 +69,10 @@ def upload() -> Any:
     if not _allowed_file(file_storage.filename):
         return jsonify({"error": "이미지 또는 PDF 파일만 업로드할 수 있습니다."}), 400
 
-    # 1) 바이트를 한 번 읽어서 평가 + 저장 모두에 사용
     payload = file_storage.read()
     if not payload:
         return jsonify({"error": "빈 파일입니다."}), 400
 
-    result = _evaluate_homework_bytes(payload)
-
-    # 2) 업로드 파일 저장
     unique_name = _make_unique_filename(file_storage.filename)
     save_path = UPLOAD_DIR / unique_name
     with save_path.open("wb") as f:
@@ -99,11 +80,11 @@ def upload() -> Any:
 
     _, ext = os.path.splitext(unique_name.lower())
     file_type = "pdf" if ext == ".pdf" else "image"
+    feedback = _pick_feedback(request.form.get("goal_text"))
 
     return jsonify(
         {
-            "score": result.score,
-            "feedback": result.feedback,
+            "feedback": feedback,
             "file_url": f"/uploads/{unique_name}",
             "file_type": file_type,
             "submitted_at": datetime.now(timezone.utc).isoformat(),

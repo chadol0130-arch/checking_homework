@@ -361,7 +361,6 @@
         </div>
         <nav class="topbar-nav">
           <a href="#dashboard">대시보드</a>
-          <a href="#upload">업로드</a>
           <a href="#calendar">캘린더</a>
           <a href="#profile">프로필</a>
         </nav>
@@ -494,33 +493,6 @@
           </form>
         </div>
       </div>
-
-      <section class="card" id="upload">
-        <h2>숙제 사진 업로드</h2>
-        <form id="upload-form">
-          <label class="upload-box" for="photo">
-            <strong>사진 선택</strong>
-            <p class="hint">PNG, JPG, WEBP, PDF 파일만 업로드할 수 있어요</p>
-            <input
-              id="photo"
-              name="photo"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,application/pdf"
-              required
-            />
-          </label>
-          <button type="submit">업로드 & 검사</button>
-        </form>
-        <div class="upload-preview" id="upload-preview">
-          <img id="local-preview-image" alt="선택한 숙제 이미지 미리보기" />
-          <iframe id="local-preview-pdf" title="선택한 숙제 PDF 미리보기"></iframe>
-          <p class="hint" id="local-preview-hint">제출 전에 선택한 파일 미리보기가 표시됩니다</p>
-          <p class="file-meta" id="local-file-meta"></p>
-        </div>
-        <div class="result" id="result">
-          <p class="hint">아직 제출된 결과가 없어요</p>
-        </div>
-      </section>
 
       <section class="card calendar-card" id="calendar">
         <div class="calendar-header">

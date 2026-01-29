@@ -814,7 +814,7 @@ button:disabled {
 
 .day-layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr)) minmax(240px, 320px);
+  grid-template-columns: minmax(320px, 1.4fr) minmax(220px, 0.9fr) minmax(200px, 260px);
   grid-template-areas: "plan submissions preview";
   gap: 20px;
   align-items: start;
@@ -856,6 +856,19 @@ button:disabled {
   gap: 8px;
 }
 
+.plan-item-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-item-body .plan-text {
+  margin: 0;
+  font-size: 14px;
+  flex: 1;
+}
+
 .plan-item.achieved {
   background: #ecfdf3;
   border-color: #bbf7d0;
@@ -876,6 +889,86 @@ button:disabled {
 .plan-text {
   margin: 0;
   font-size: 14px;
+}
+
+.goal-upload {
+  width: 88px;
+  height: 88px;
+  border-radius: 14px;
+  border: 2px dashed #c6d2ff;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.goal-upload:hover {
+  border-color: #4c6fff;
+  transform: translateY(-1px);
+}
+
+.goal-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.goal-upload::before {
+  content: "";
+  width: 34px;
+  height: 26px;
+  border-radius: 8px;
+  border: 2px solid #cbd5f5;
+  background: linear-gradient(135deg, #eef2ff, #ffffff);
+}
+
+.goal-upload::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #cbd5f5;
+  position: absolute;
+}
+
+.goal-upload .checkmark {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.goal-upload.has-image {
+  border-style: solid;
+  background-size: cover;
+  background-position: center;
+}
+
+.goal-upload.has-image::before,
+.goal-upload.has-image::after {
+  display: none;
+}
+
+.goal-upload.achieved .checkmark {
+  display: flex;
+}
+
+.goal-upload.is-uploading {
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .plan-period {

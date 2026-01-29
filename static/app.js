@@ -304,32 +304,47 @@ if (calendarTodayButton) {
   });
 }
 
-fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-  if (!file) {
-    resetLocalPreview();
-    return;
-  }
+if (fileInput) {
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) {
+      resetLocalPreview();
+      return;
+    }
 
-  if (localObjectUrl) {
-    URL.revokeObjectURL(localObjectUrl);
-  }
-  localObjectUrl = URL.createObjectURL(file);
-  localFileMeta.textContent = `${file.name} 쨌 ${(file.size / 1024).toFixed(1)} KB`;
-  localPreviewHint.style.display = "none";
+    if (localObjectUrl) {
+      URL.revokeObjectURL(localObjectUrl);
+    }
+    localObjectUrl = URL.createObjectURL(file);
+    if (localFileMeta) {
+      localFileMeta.textContent = `${file.name} 쨌 ${(file.size / 1024).toFixed(1)} KB`;
+    }
+    if (localPreviewHint) {
+      localPreviewHint.style.display = "none";
+    }
 
-  if (file.type === "application/pdf") {
-    localPreviewPdf.src = localObjectUrl;
-    localPreviewPdf.style.display = "block";
-    localPreviewImage.style.display = "none";
-  } else {
-    localPreviewImage.src = localObjectUrl;
-    localPreviewImage.style.display = "block";
-    localPreviewPdf.style.display = "none";
-  }
-});
+    if (file.type === "application/pdf") {
+      if (localPreviewPdf) {
+        localPreviewPdf.src = localObjectUrl;
+        localPreviewPdf.style.display = "block";
+      }
+      if (localPreviewImage) {
+        localPreviewImage.style.display = "none";
+      }
+    } else {
+      if (localPreviewImage) {
+        localPreviewImage.src = localObjectUrl;
+        localPreviewImage.style.display = "block";
+      }
+      if (localPreviewPdf) {
+        localPreviewPdf.style.display = "none";
+      }
+    }
+  });
+}
 
-form.addEventListener("submit", async (event) => {
+if (form) {
+  form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!currentUserId) {
     resultBox.innerHTML = "<p class=\"error\">로그인 후 제출할 수 있습니다.</p>";
@@ -356,15 +371,26 @@ form.addEventListener("submit", async (event) => {
     }
 
     const photoText = fileInput.files[0]?.name || "";
-    const matchResult = evaluateGoalsAgainstText(photoText, goalsCache);
-    const totalsBefore = calculateGoalTotals(goalsCache, new Date());
-    const achievedAfter = totalsBefore.achieved + matchResult.newlyAchieved.length;
+    const now = new Date();
+    const ocrText = typeof payload.ocr_text === "string" ? payload.ocr_text.trim() : "";
+    const ocrEngine =
+      typeof payload.ocr_engine === "string" && payload.ocr_engine ? payload.ocr_engine : "none";
+    const ocrSource =
+      typeof payload.ocr_source === "string" && payload.ocr_source ? payload.ocr_source : "unknown";
+    const matchSourceText = buildMatchSourceText({
+      ocrText,
+      fallbackText: photoText,
+    });
+    const matchResult = evaluateGoalsAgainstText(matchSourceText, goalsCache, now);
+    const totalsBefore = calculateGoalTotals(goalsCache, now);
     const totalGoals = totalsBefore.total;
+    const newlyAchievedCount = matchResult.newlyAchieved.length;
+    const achievedAfter = totalGoals ? totalsBefore.achieved + newlyAchievedCount : totalsBefore.achieved;
     const achievementRate = totalGoals
       ? Math.round((achievedAfter / totalGoals) * 100)
       : 0;
-    const gainedXp = matchResult.newlyAchieved.length
-      ? achievementRate * matchResult.newlyAchieved.length
+    const gainedXp = totalGoals
+      ? calculateGainedXp({ matchedCount: newlyAchievedCount, achievementRate })
       : 0;
     const totalXp = currentTotalXp + gainedXp;
     const level = Math.floor(totalXp / 100) + 1;
@@ -375,11 +401,18 @@ form.addEventListener("submit", async (event) => {
 
     const scoreText = typeof payload.score === "number" ? `${payload.score}점` : "-";
     const feedbackText = payload.feedback || "피드백 없음";
+    const goalSummaryText = totalGoals
+      ? `<p><strong>달성률:</strong> ${achievementRate}% (${achievedAfter}/${totalGoals})</p>`
+      : "<p><strong>목표 상태:</strong> 설정된 목표가 없어 XP 변동 없음</p>";
+    const ocrSummaryText = ocrText
+      ? `<p><strong>OCR 인식:</strong> ${ocrText.length}자 (${ocrEngine}/${ocrSource})</p>`
+      : `<p><strong>OCR 상태:</strong> 인식 실패/비활성 (${ocrEngine}/${ocrSource})</p>`;
     resultBox.innerHTML = `
       <p><strong>채점 점수:</strong> ${scoreText}</p>
       <p><strong>피드백:</strong> ${feedbackText}</p>
       <p><strong>달성 목표:</strong> ${matchedGoalsLabel}</p>
-      <p><strong>달성률:</strong> ${achievementRate}% (${achievedAfter}/${totalGoals})</p>
+      ${goalSummaryText}
+      ${ocrSummaryText}
       <p><strong>획득 XP:</strong> ${gainedXp}</p>
     `;
 
@@ -387,22 +420,24 @@ form.addEventListener("submit", async (event) => {
       updateServerPreview(payload.file_url, payload.file_type);
     }
 
-    const updates = {
-      [`sessions/${currentUserId}`]: {
-        level,
-        total_xp: totalXp,
-        achievement_rate: achievementRate,
-        achieved_goals: achievedAfter,
-        total_goals: totalGoals,
-        updated_at: payload.submitted_at,
-      },
-    };
-    for (const entry of matchResult.newlyAchieved) {
-      updates[`goals/${currentUserId}/${entry.period}/${entry.id}/achieved`] = true;
-      updates[`goals/${currentUserId}/${entry.period}/${entry.id}/achieved_at`] =
-        payload.submitted_at;
+    if (totalGoals > 0) {
+      const updates = {
+        [`sessions/${currentUserId}`]: {
+          level,
+          total_xp: totalXp,
+          achievement_rate: achievementRate,
+          achieved_goals: achievedAfter,
+          total_goals: totalGoals,
+          updated_at: payload.submitted_at,
+        },
+      };
+      for (const entry of matchResult.newlyAchieved) {
+        updates[`goals/${currentUserId}/${entry.period}/${entry.id}/achieved`] = true;
+        updates[`goals/${currentUserId}/${entry.period}/${entry.id}/achieved_at`] =
+          payload.submitted_at;
+      }
+      await update(ref(database), updates);
     }
-    await update(ref(database), updates);
 
     const submissionRef = push(ref(database, `submissions/${currentUserId}`));
     await set(submissionRef, {
@@ -420,7 +455,8 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     resultBox.innerHTML = `<p class="error">${error.message}</p>`;
   }
-});
+  });
+}
 
 function updateServerPreview(fileUrl, fileType) {
   previewHint.style.display = "none";
@@ -584,6 +620,45 @@ function showGoalWarning(target, message) {
   }
 }
 
+function clampNumber(value, min, max) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(Math.max(value, min), max);
+}
+
+function createGoalUpload(goal) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "goal-upload";
+  if (goal.submission_url) {
+    wrapper.classList.add("has-image");
+    wrapper.style.backgroundImage = `url(${goal.submission_url})`;
+  }
+  if (goal.achieved) {
+    wrapper.classList.add("achieved");
+  }
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/png,image/jpeg,image/webp,application/pdf";
+  input.disabled = isAuthLocked;
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    handleGoalUpload(goal, file, wrapper);
+    input.value = "";
+  });
+
+  const checkmark = document.createElement("span");
+  checkmark.className = "checkmark";
+  checkmark.textContent = "V";
+
+  wrapper.append(input, checkmark);
+  return wrapper;
+}
+
 function getGoalControls(period) {
   if (period === "weekly") {
     return { input: weekGoalInput, button: weekGoalAddBtn, warning: weekGoalWarning };
@@ -702,6 +777,107 @@ async function addGoalForPeriod(period) {
   }
 }
 
+async function handleGoalUpload(goal, file, wrapper) {
+  if (!currentUserId || !goal?.id || !goal?.period) {
+    showGoalWarning(dayGoalWarning, "로그인 후 제출할 수 있습니다.");
+    return;
+  }
+  const controls = getGoalControls(goal.period);
+  try {
+    wrapper?.classList.add("is-uploading");
+    const formData = new FormData();
+    formData.append("photo", file);
+    formData.append("goal_text", goal.text || "");
+
+    const response = await fetch("/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "업로드에 실패했습니다.");
+    }
+
+    const submittedAt = payload.submitted_at || new Date().toISOString();
+    const feedback = payload.feedback || `${goal.text || "목표"} 완료!`;
+    const fileUrl = payload.file_url || "";
+    const fileType = payload.file_type || "image";
+    const alreadyAchieved = Boolean(goal.achieved);
+
+    await update(ref(database), {
+      [`goals/${currentUserId}/${goal.period}/${goal.id}/achieved`]: true,
+      [`goals/${currentUserId}/${goal.period}/${goal.id}/achieved_at`]: submittedAt,
+      [`goals/${currentUserId}/${goal.period}/${goal.id}/submission_url`]: fileUrl,
+      [`goals/${currentUserId}/${goal.period}/${goal.id}/submission_type`]: fileType,
+      [`goals/${currentUserId}/${goal.period}/${goal.id}/submission_feedback`]: feedback,
+      [`goals/${currentUserId}/${goal.period}/${goal.id}/submission_at`]: submittedAt,
+    });
+
+    const referenceDate = selectedDate || new Date();
+    const totalsBefore = calculateGoalTotals(goalsCache, referenceDate);
+    const totalGoals = totalsBefore.total;
+    const achievedBefore = Math.min(totalsBefore.achieved, totalGoals);
+    const achievedAfter = alreadyAchieved
+      ? achievedBefore
+      : Math.min(totalGoals, achievedBefore + 1);
+    const achievementRate = totalGoals
+      ? Math.round((achievedAfter / totalGoals) * 100)
+      : 0;
+    const safeRate = clampNumber(achievementRate, 0, 100);
+    const gainedXp = alreadyAchieved ? 0 : GOAL_UPLOAD_XP;
+    const totalXp = currentTotalXp + gainedXp;
+    const level = Math.floor(totalXp / 100) + 1;
+
+    const submissionRef = push(ref(database, `submissions/${currentUserId}`));
+    await set(submissionRef, {
+      gained_xp: gainedXp,
+      achievement_rate: safeRate,
+      score: null,
+      feedback,
+      matched_goals: goal.text ? [goal.text] : [],
+      total_goals: totalGoals,
+      achieved_goals: achievedAfter,
+      file_url: fileUrl,
+      file_type: fileType,
+      goal_id: goal.id,
+      goal_period: goal.period,
+      created_at: submittedAt,
+    });
+
+    if (!alreadyAchieved) {
+      await update(ref(database), {
+        [`sessions/${currentUserId}`]: {
+          level,
+          total_xp: totalXp,
+          achievement_rate: safeRate,
+          achieved_goals: achievedAfter,
+          total_goals: totalGoals,
+          updated_at: submittedAt,
+        },
+      });
+    }
+
+    if (wrapper) {
+      if (fileUrl) {
+        wrapper.style.backgroundImage = `url(${fileUrl})`;
+        wrapper.classList.add("has-image");
+      }
+      wrapper.classList.add("achieved");
+    }
+
+    showGoalWarning(controls.warning, "");
+    updateGoalInputState();
+  } catch (error) {
+    console.error("제출 업로드 오류:", error);
+    showGoalWarning(
+      controls.warning,
+      error?.message ? String(error.message) : "업로드에 실패했습니다."
+    );
+  } finally {
+    wrapper?.classList.remove("is-uploading");
+  }
+}
+
 function renderGoalLists(goalsData) {
   renderGoalList(dailyGoalList, goalsData.daily, "일");
   renderGoalList(weeklyGoalList, goalsData.weekly, "주");
@@ -757,8 +933,9 @@ function calculateGoalTotals(goalsData, referenceDate = null) {
       }
     }
   }
-  const rate = total ? Math.round((achieved / total) * 100) : 0;
-  return { total, achieved, rate };
+  const safeAchieved = Math.min(achieved, total);
+  const rate = total ? Math.round((safeAchieved / total) * 100) : 0;
+  return { total, achieved: safeAchieved, rate: clampNumber(rate, 0, 100) };
 }
 
 function updateAchievementUI(rate, achieved, total) {
@@ -784,6 +961,9 @@ const monthFormatter = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month
 const timeFormatter = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit" });
 const weekdayFormatter = new Intl.DateTimeFormat("ko-KR", { weekday: "short" });
 const successRateThreshold = 70;
+const XP_PER_MATCH = 50;
+const XP_RATE_BONUS = 1;
+const GOAL_UPLOAD_XP = 50;
 
 function setCalendarView(view) {
   const allowed = ["day", "week", "month"];
@@ -898,7 +1078,7 @@ function renderDayGoals(goalsData) {
   };
   const entries = [];
   for (const period of ["daily", "weekly", "monthly"]) {
-    for (const goal of Object.values(goalsData[period] || {})) {
+    for (const [id, goal] of Object.entries(goalsData[period] || {})) {
       const { dayKey, weekKey, monthKey } = getGoalDateKeys(goal);
 
       if (period === "daily" && dayKey !== selectedDayKey) {
@@ -911,7 +1091,7 @@ function renderDayGoals(goalsData) {
         continue;
       }
 
-      entries.push({ ...goal, period });
+      entries.push({ id, ...goal, period });
     }
   }
 
@@ -941,8 +1121,12 @@ function renderDayGoals(goalsData) {
     text.className = "plan-text";
     text.textContent = goal.text || "";
 
+    const body = document.createElement("div");
+    body.className = "plan-item-body";
+    body.append(text, createGoalUpload(goal));
+
     header.append(period, status);
-    item.append(header, text);
+    item.append(header, body);
     dayGoalList.appendChild(item);
   }
 }
@@ -997,14 +1181,10 @@ function renderDaySubmissions(entries) {
       goalProgress.textContent = "목표 -";
     }
 
-    const scoreText = document.createElement("span");
-    if (typeof entry.score === "number") {
-      scoreText.textContent = `점수 ${entry.score}점`;
-    } else {
-      scoreText.textContent = "점수 -";
-    }
+    const messageText = document.createElement("span");
+    messageText.textContent = entry.feedback ? "응원 메시지" : "응원 없음";
 
-    meta.append(xpText, goalProgress, scoreText);
+    meta.append(xpText, goalProgress, messageText);
 
     const feedback = document.createElement("p");
     feedback.className = "submission-feedback";
@@ -1154,12 +1334,12 @@ function createTag(text, type) {
 
 function getDayStats(dayKey) {
   const entries = submissionsByDay[dayKey] || [];
-  if (!entries.length) {
-    return { entries: [], count: 0, rate: 0 };
-  }
-  const totalRate = entries.reduce((sum, entry) => sum + (Number(entry.achievement_rate) || 0), 0);
-  const rate = Math.round(totalRate / entries.length);
-  return { entries, count: entries.length, rate };
+  const referenceDate = parseDayKey(dayKey);
+  const totals = referenceDate
+    ? calculateGoalTotals(goalsCache, referenceDate)
+    : { total: 0, achieved: 0, rate: 0 };
+  const rate = totals.rate ?? 0;
+  return { entries, count: entries.length, rate, totals };
 }
 
 function groupSubmissionsByDay(submissions) {
@@ -1188,6 +1368,21 @@ function parseIsoDate(value) {
     return null;
   }
   const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseDayKey(dayKey) {
+  if (!dayKey || typeof dayKey !== "string") {
+    return null;
+  }
+  const [year, month, day] = dayKey.split("-").map(Number);
+  if (!year || !month || !day) {
+    return null;
+  }
+  const parsed = new Date(year, month - 1, day);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
@@ -1258,6 +1453,235 @@ function normalizeText(value) {
     .replace(/[^a-z0-9가-힣]/g, "");
 }
 
+function deriveKeywordHints(text) {
+  if (!text) {
+    return [];
+  }
+  const hints = new Set();
+  const lowered = text.toLowerCase();
+  const codeTokens = [
+    "def ",
+    "class ",
+    "import ",
+    "from ",
+    "print(",
+    "console.log",
+    "function",
+    "const ",
+    "let ",
+    "var ",
+    "#include",
+    "int main",
+    "public static",
+    "system.out",
+    "return ",
+  ];
+  const hasCodeTokens = codeTokens.some((token) => lowered.includes(token));
+  const symbolCount = (text.match(/[{}()[\];=<>:+\-*/]/g) || []).length;
+  const hasCodeSymbols = symbolCount >= 8;
+
+  if (hasCodeTokens || hasCodeSymbols) {
+    hints.add("코딩");
+    hints.add("코드");
+    hints.add("프로그래밍");
+    hints.add("과제");
+    hints.add("coding");
+    hints.add("programming");
+    hints.add("code");
+  }
+
+  const mathKeywords = [
+    "math",
+    "mathematics",
+    "algebra",
+    "geometry",
+    "calculus",
+    "trigonometry",
+    "equation",
+    "function",
+    "integral",
+    "derivative",
+    "matrix",
+    "probability",
+    "statistics",
+  ];
+  const calculusTokens = [
+    "미적분",
+    "미분",
+    "적분",
+    "d/dx",
+    "dy/dx",
+    "dx",
+    "dy",
+    "∫",
+    "sqrt",
+  ];
+  const mathSymbols = /[±×÷√π∑∫∞]/;
+  const hasCalculusTokens =
+    calculusTokens.some((token) => lowered.includes(token) || text.includes(token)) ||
+    /d\s*\/\s*dx/.test(lowered) ||
+    /dy\s*\/\s*dx/.test(lowered);
+  if (
+    mathKeywords.some((keyword) => lowered.includes(keyword)) ||
+    mathSymbols.test(text) ||
+    hasCalculusTokens
+  ) {
+    hints.add("수학");
+    hints.add("math");
+    hints.add("mathematics");
+    if (hasCalculusTokens || lowered.includes("calculus")) {
+      hints.add("미적분");
+      hints.add("미분");
+      hints.add("적분");
+      hints.add("calculus");
+      hints.add("derivative");
+      hints.add("integral");
+    }
+  }
+
+  const englishKeywords = [
+    "coding",
+    "programming",
+    "program",
+    "code",
+    "developer",
+    "develop",
+    "algorithm",
+    "data structure",
+    "datastructure",
+    "python",
+    "java",
+    "javascript",
+    "js",
+    "typescript",
+    "c++",
+    "c#",
+    "html",
+    "css",
+    "react",
+    "node",
+    "backend",
+    "frontend",
+  ];
+  if (englishKeywords.some((keyword) => lowered.includes(keyword))) {
+    hints.add("코딩");
+    hints.add("코드");
+    hints.add("프로그래밍");
+    hints.add("과제");
+  }
+
+  if (lowered.includes("html") || lowered.includes("<div") || lowered.includes("<script")) {
+    hints.add("웹");
+    hints.add("프론트엔드");
+  }
+  if (lowered.includes("select") || lowered.includes("insert") || lowered.includes("update")) {
+    hints.add("데이터베이스");
+  }
+
+  return Array.from(hints);
+}
+
+function buildMatchSourceText({ ocrText, fallbackText }) {
+  const hints = deriveKeywordHints(ocrText || "");
+  return [ocrText, fallbackText, ...hints].filter(Boolean).join(" ");
+}
+
+function expandGoalKeywords(goalText) {
+  const variants = new Set();
+  const normalizedGoal = normalizeText(goalText);
+  if (normalizedGoal) {
+    variants.add(normalizedGoal);
+  }
+
+  const raw = String(goalText || "");
+  const lower = raw.toLowerCase();
+  const hasKoreanCoding = /코딩|코드|프로그래밍/.test(raw);
+  const hasEnglishCoding = /coding|programming|code/.test(lower);
+  const hasAlgorithm = /알고리즘|algorithm/.test(raw) || /algorithm/.test(lower);
+  const hasDataStructure = /자료구조|data\s*structure|datastructure/.test(raw) || /data\s*structure/.test(lower);
+
+  if (hasKoreanCoding || hasEnglishCoding) {
+    ["코딩", "코드", "프로그래밍", "과제", "coding", "programming", "code"].forEach((term) => {
+      const normalized = normalizeText(term);
+      if (normalized) {
+        variants.add(normalized);
+      }
+    });
+  }
+
+  if (hasAlgorithm) {
+    ["알고리즘", "algorithm"].forEach((term) => {
+      const normalized = normalizeText(term);
+      if (normalized) {
+        variants.add(normalized);
+      }
+    });
+  }
+
+  if (hasDataStructure) {
+    ["자료구조", "datastructure", "data structure"].forEach((term) => {
+      const normalized = normalizeText(term);
+      if (normalized) {
+        variants.add(normalized);
+      }
+    });
+  }
+
+  const hasMath =
+    /수학|계산|공식|방정식|함수/.test(raw) ||
+    /math|mathematics|algebra|geometry|calculus|trigonometry|equation|function|integral|derivative|matrix|probability|statistics/.test(
+      lower
+    );
+  const hasCalculus =
+    /미적분|미분|적분/.test(raw) ||
+    /calculus|integral|derivative/.test(lower) ||
+    /d\s*\/\s*dx|dy\s*\/\s*dx/.test(lower);
+  if (hasMath) {
+    [
+      "수학",
+      "math",
+      "mathematics",
+      "algebra",
+      "geometry",
+      "calculus",
+      "trigonometry",
+      "equation",
+      "function",
+      "integral",
+      "derivative",
+      "matrix",
+      "probability",
+      "statistics",
+    ].forEach((term) => {
+      const normalized = normalizeText(term);
+      if (normalized) {
+        variants.add(normalized);
+      }
+    });
+  }
+  if (hasCalculus) {
+    [
+      "미적분",
+      "미분",
+      "적분",
+      "calculus",
+      "derivative",
+      "integral",
+      "dx",
+      "dy",
+      "d/dx",
+      "dy/dx",
+    ].forEach((term) => {
+      const normalized = normalizeText(term);
+      if (normalized) {
+        variants.add(normalized);
+      }
+    });
+  }
+
+  return Array.from(variants);
+}
+
 function evaluateGoalsAgainstText(photoText, goalsData, referenceDate = new Date()) {
   const normalizedPhoto = normalizeText(photoText);
   const matchedGoals = [];
@@ -1283,11 +1707,12 @@ function evaluateGoalsAgainstText(photoText, goalsData, referenceDate = new Date
       if (period === "monthly" && monthKey !== refMonthKey) {
         continue;
       }
-      const normalizedGoal = normalizeText(goal.text);
-      if (!normalizedGoal) {
+      const goalVariants = expandGoalKeywords(goal.text);
+      if (!goalVariants.length) {
         continue;
       }
-      if (normalizedPhoto.includes(normalizedGoal)) {
+      const isMatched = goalVariants.some((variant) => normalizedPhoto.includes(variant));
+      if (isMatched) {
         matchedGoals.push(goal.text);
         if (!goal.achieved) {
           newlyAchieved.push({ id, period, text: goal.text });
@@ -1328,6 +1753,14 @@ function backfillGoalKeys(userId, goalsData) {
       console.error("목표 키 백필 실패:", error);
     });
   }
+}
+
+function calculateGainedXp({ matchedCount, achievementRate }) {
+  if (!matchedCount) {
+    return 0;
+  }
+  const rateBonus = Math.round(achievementRate * XP_RATE_BONUS);
+  return matchedCount * XP_PER_MATCH + rateBonus;
 }
 
 
