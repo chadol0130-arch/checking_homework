@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>직독직해 연습 - 시험지 목록</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+      .exam-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+      }
+      .exam-card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+      }
+      .exam-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 24px 48px rgba(15,23,42,0.12);
+      }
+      .exam-card h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .exam-meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .upload-section {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+        margin-bottom: 32px;
+      }
+      .upload-form {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+      }
+      .upload-form .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .upload-form label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .upload-form input[type="text"] {
+        padding: 10px 14px;
+        border: 1px solid #dde2f0;
+        border-radius: 10px;
+        font-size: 14px;
+        width: 240px;
+      }
+      .upload-form input[type="file"] {
+        padding: 8px;
+        border: 1px dashed #c0c8e0;
+        border-radius: 10px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .btn-primary:hover { background: #3a5eef; }
+      .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+      .status-msg {
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .empty-state {
+        text-align: center;
+        padding: 48px 0;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark">HW</div>
+          <span>Homework Checker</span>
+        </div>
+        <div class="topbar-nav">
+          <a href="/">대시보드</a>
+          <a href="/exam" style="color:var(--primary); background:#eef2ff;">직독직해</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h2 style="margin-bottom:4px;">직독직해 연습</h2>
+      <p style="color:var(--muted); margin-top:0;">수능 영어 PDF를 업로드하면 자동으로 지문을 분석합니다.</p>
+
+      <!-- PDF 업로드 -->
+      <div class="upload-section">
+        <h3 style="margin:0 0 16px;">새 시험지 등록</h3>
+        <form class="upload-form" id="uploadForm">
+          <div class="form-group">
+            <label>시험지 이름</label>
+            <input type="text" id="examTitle" placeholder="예: 2025 수능 영어" required />
+          </div>
+          <div class="form-group">
+            <label>PDF 파일</label>
+            <input type="file" id="examFile" accept=".pdf" required />
+          </div>
+          <button type="submit" class="btn-primary" id="uploadBtn">업로드 & 분석</button>
+        </form>
+        <div class="status-msg" id="uploadStatus"></div>
+      </div>
+
+      <!-- 저장된 시험지 목록 -->
+      <h3>저장된 시험지</h3>
+      <div class="exam-grid" id="examGrid">
+        <div class="empty-state" id="emptyState">불러오는 중...</div>
+      </div>
+    </div>
+
+    <!-- 지문 선택 모달 -->
+    <div id="reviewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; overflow-y:auto;">
+      <div style="max-width:800px; margin:40px auto; background:#fff; border-radius:20px; padding:32px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <h2 style="margin:0;">지문 선택</h2>
+          <button onclick="closeModal()" style="background:none; border:none; font-size:28px; cursor:pointer; color:#666;">×</button>
+        </div>
+        <p style="color:var(--muted); margin-top:0;">포함할 지문을 선택하고, 각 문장의 참고 번역을 입력하세요.</p>
+        <div id="blockList"></div>
+        <div style="margin-top:24px; display:flex; gap:12px; justify-content:flex-end;">
+          <button onclick="closeModal()" style="padding:10px 20px; border:1px solid #dde2f0; border-radius:10px; cursor:pointer; background:#fff;">취소</button>
+          <button onclick="saveExam()" class="btn-primary" id="saveBtn">시험지 저장</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let parsedBlocks = [];
+      let pdfFilename = '';
+
+      // 시험지 목록 로드
+      async function loadExams() {
+        const res = await fetch('/exam/list-json');
+        const exams = await res.json();
+        const grid = document.getElementById('examGrid');
+        const empty = document.getElementById('emptyState');
+        if (exams.length === 0) {
+          empty.textContent = '아직 등록된 시험지가 없습니다.';
+          return;
+        }
+        empty.remove();
+        exams.forEach(e => {
+          const card = document.createElement('a');
+          card.className = 'exam-card';
+          card.href = `/exam/${e.exam_id}`;
+          card.innerHTML = `
+            <h3>${escHtml(e.title)}</h3>
+            <div class="exam-meta">지문 ${e.passage_count}개 · ${new Date(e.created_at).toLocaleDateString('ko-KR')}</div>
+          `;
+          grid.appendChild(card);
+        });
+      }
+
+      // PDF 업로드
+      document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('uploadBtn');
+        const status = document.getElementById('uploadStatus');
+        const title = document.getElementById('examTitle').value.trim();
+        const file = document.getElementById('examFile').files[0];
+
+        if (!title || !file) return;
+
+        btn.disabled = true;
+        btn.textContent = '분석 중...';
+        status.textContent = 'PDF에서 지문을 추출하고 있습니다...';
+
+        const fd = new FormData();
+        fd.append('exam_pdf', file);
+
+        try {
+          const res = await fetch('/exam/upload', { method: 'POST', body: fd });
+          const data = await res.json();
+          if (!res.ok) {
+            status.textContent = '오류: ' + (data.error || '업로드 실패');
+            return;
+          }
+          parsedBlocks = data.blocks;
+          pdfFilename = data.pdf_filename;
+          status.textContent = `${data.total}개 지문 블록 추출 완료. 아래에서 포함할 지문을 선택하세요.`;
+          openModal(title);
+        } catch (err) {
+          status.textContent = '네트워크 오류가 발생했습니다.';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '업로드 & 분석';
+        }
+      });
+
+      function openModal(title) {
+        document.getElementById('reviewModal').style.display = 'block';
+        const list = document.getElementById('blockList');
+        list.innerHTML = '';
+
+        if (parsedBlocks.length === 0) {
+          list.innerHTML = '<p style="color:var(--muted);">추출된 독해 지문이 없습니다. PDF 이미지 품질을 확인하세요.</p>';
+          return;
+        }
+
+        parsedBlocks.forEach((block, idx) => {
+          const div = document.createElement('div');
+          div.style.cssText = 'border:1px solid #e0e7ff; border-radius:12px; padding:16px; margin-bottom:16px;';
+          div.innerHTML = `
+            <label style="display:flex; gap:10px; cursor:pointer;">
+              <input type="checkbox" class="block-check" data-idx="${idx}" checked style="margin-top:2px;" />
+              <div style="flex:1;">
+                <strong>${block.question_num}번</strong>
+                <div style="font-size:13px; color:var(--muted); margin:6px 0; line-height:1.6;">${escHtml(block.text.slice(0, 200))}${block.text.length > 200 ? '...' : ''}</div>
+                <div style="font-size:12px; color:var(--primary);">문장 ${block.sentences.length}개</div>
+              </div>
+            </label>
+            <div class="sentence-list" id="sentences-${idx}" style="margin-top:12px;">
+              ${block.sentences.map((s, si) => `
+                <div style="margin-bottom:10px; padding:10px; background:#f8f9ff; border-radius:8px;">
+                  <div style="font-size:13px; margin-bottom:6px;">${escHtml(s)}</div>
+                  <input type="text" placeholder="참고 번역 (직독직해 기준)"
+                    class="ref-answer" data-block="${idx}" data-sentence="${si}"
+                    style="width:100%; padding:8px 10px; border:1px solid #dde2f0; border-radius:8px; font-size:13px;" />
+                </div>
+              `).join('')}
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      }
+
+      function closeModal() {
+        document.getElementById('reviewModal').style.display = 'none';
+      }
+
+      async function saveExam() {
+        const title = document.getElementById('examTitle').value.trim();
+        const saveBtn = document.getElementById('saveBtn');
+
+        const passages = [];
+        document.querySelectorAll('.block-check').forEach(chk => {
+          if (!chk.checked) return;
+          const idx = parseInt(chk.dataset.idx);
+          const block = parsedBlocks[idx];
+          const sentences = block.sentences.map((s, si) => {
+            const inp = document.querySelector(`.ref-answer[data-block="${idx}"][data-sentence="${si}"]`);
+            return {
+              sentence_id: `${block.question_num}_${si}`,
+              english: s,
+              hints: [],
+              model_answer: inp ? inp.value.trim() : '',
+            };
+          });
+          passages.push({
+            passage_id: String(block.question_num),
+            question_num: block.question_num,
+            original_text: block.text,
+            sentences,
+            comprehension_questions: [],
+          });
+        });
+
+        if (passages.length === 0) {
+          alert('최소 1개 이상의 지문을 선택하세요.');
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = '저장 중...';
+
+        try {
+          const res = await fetch('/exam/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, passages }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            alert('저장 오류: ' + (data.error || ''));
+            return;
+          }
+          closeModal();
+          window.location.href = `/exam/${data.exam_id}`;
+        } catch (err) {
+          alert('네트워크 오류가 발생했습니다.');
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '시험지 저장';
+        }
+      }
+
+      function escHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      loadExams();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>직독직해 연습</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+      .reading-card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: var(--shadow);
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .progress-bar-wrap {
+        background: #e8ecf8;
+        border-radius: 999px;
+        height: 8px;
+        margin-bottom: 24px;
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        background: linear-gradient(90deg, var(--primary), #7d8dff);
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.4s ease;
+      }
+      .passage-label {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .english-sentence {
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        padding: 16px 20px;
+        background: #f0f4ff;
+        border-radius: 12px;
+        border-left: 4px solid var(--primary);
+      }
+      .hint-area {
+        margin-bottom: 20px;
+        min-height: 36px;
+      }
+      .hint-chunk {
+        display: inline-block;
+        background: #fff9e6;
+        border: 1px solid #ffd166;
+        border-radius: 8px;
+        padding: 4px 10px;
+        font-size: 14px;
+        margin: 4px 4px 4px 0;
+      }
+      .hint-question {
+        display: inline-block;
+        background: #e6f7ff;
+        border: 1px solid #7dd3fc;
+        border-radius: 8px;
+        padding: 4px 10px;
+        font-size: 13px;
+        color: #0369a1;
+        margin: 4px 4px 4px 0;
+      }
+      .translation-input {
+        width: 100%;
+        padding: 14px 16px;
+        border: 2px solid #dde2f0;
+        border-radius: 12px;
+        font-size: 16px;
+        outline: none;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+      }
+      .translation-input:focus { border-color: var(--primary); }
+      .translation-input.correct { border-color: var(--success); background: #f0fff4; }
+      .translation-input.wrong { border-color: var(--danger); background: #fff5f5; }
+      .feedback-box {
+        margin-top: 12px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 14px;
+        display: none;
+      }
+      .feedback-box.pass { background: #d1fae5; color: #065f46; display: block; }
+      .feedback-box.fail { background: #fee2e2; color: #991b1b; display: block; }
+      .btn-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+      .btn-hint {
+        background: #fff9e6;
+        border: 1px solid #ffd166;
+        color: #92400e;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn-hint:disabled { opacity: 0.4; cursor: not-allowed; }
+      .btn-submit {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        flex: 1;
+      }
+      .btn-submit:hover { background: #3a5eef; }
+      .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+      .btn-next {
+        background: var(--success);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        display: none;
+      }
+      .xp-badge {
+        background: var(--accent);
+        color: #92400e;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        display: none;
+      }
+
+      /* MCQ 화면 */
+      .mcq-card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: var(--shadow);
+        max-width: 720px;
+        margin: 0 auto;
+        display: none;
+      }
+      .mcq-option {
+        padding: 12px 16px;
+        border: 2px solid #dde2f0;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+        font-size: 15px;
+      }
+      .mcq-option:hover { border-color: var(--primary); background: #f0f4ff; }
+      .mcq-option.selected { border-color: var(--primary); background: #eef2ff; }
+      .mcq-option.correct { border-color: var(--success); background: #d1fae5; }
+      .mcq-option.wrong-selected { border-color: var(--danger); background: #fee2e2; }
+
+      /* 완료 화면 */
+      .done-card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 48px 32px;
+        box-shadow: var(--shadow);
+        max-width: 480px;
+        margin: 0 auto;
+        text-align: center;
+        display: none;
+      }
+      .done-card .big-num {
+        font-size: 64px;
+        font-weight: 800;
+        color: var(--primary);
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark">HW</div>
+          <span>Homework Checker</span>
+        </div>
+        <div class="topbar-nav">
+          <a href="/">대시보드</a>
+          <a href="/exam" style="color:var(--primary); background:#eef2ff;">직독직해</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container" style="padding-top:32px;">
+
+      <!-- 직독직해 연습 카드 -->
+      <div class="reading-card" id="readingCard">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+        </div>
+        <div class="passage-label" id="passageLabel"></div>
+        <div class="english-sentence" id="englishSentence">로딩 중...</div>
+        <div class="hint-area" id="hintArea"></div>
+        <input type="text" class="translation-input" id="translationInput"
+               placeholder="직독직해로 번역해 보세요" autocomplete="off" />
+        <div class="feedback-box" id="feedbackBox"></div>
+        <div class="btn-row">
+          <button class="btn-hint" id="btnHint" onclick="showNextHint()">힌트 보기</button>
+          <button class="btn-submit" id="btnSubmit" onclick="submitTranslation()">번역 제출</button>
+          <button class="btn-next" id="btnNext" onclick="nextSentence()">다음 문장 →</button>
+          <span class="xp-badge" id="xpBadge"></span>
+        </div>
+      </div>
+
+      <!-- MCQ 카드 (지문 완독 후) -->
+      <div class="mcq-card" id="mcqCard">
+        <h3 id="mcqTitle" style="margin-top:0;"></h3>
+        <div id="mcqQuestion" style="font-size:16px; margin-bottom:20px;"></div>
+        <div id="mcqOptions"></div>
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn-next" id="btnMcqNext" onclick="nextMcq()" style="display:none;">다음 문제 →</button>
+        </div>
+        <div id="mcqProgress" style="font-size:13px; color:var(--muted); margin-top:8px;"></div>
+      </div>
+
+      <!-- 완료 카드 -->
+      <div class="done-card" id="doneCard">
+        <div style="font-size:48px; margin-bottom:12px;">🎉</div>
+        <h2>완료!</h2>
+        <div class="big-num" id="doneScore">-</div>
+        <div style="font-size:16px; color:var(--muted); margin:8px 0 24px;">정답률</div>
+        <div style="font-size:18px; font-weight:700; color:var(--accent);">+<span id="doneTotalXp">0</span> XP 획득!</div>
+        <div style="margin-top:28px; display:flex; gap:12px; justify-content:center;">
+          <a href="/exam" style="padding:10px 20px; border:1px solid #dde2f0; border-radius:10px; text-decoration:none; color:var(--text); font-weight:600;">목록으로</a>
+          <button onclick="restart()" style="padding:10px 20px; background:var(--primary); color:#fff; border:none; border-radius:10px; font-weight:600; cursor:pointer;">다시 풀기</button>
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+      const EXAM = {{ exam | tojson }};
+
+      let passageIdx = 0;
+      let sentenceIdx = 0;
+      let hintIdx = 0;
+      let totalSentences = 0;
+      let completedSentences = 0;
+      let totalXp = 0;
+      let correctCount = 0;
+      let mcqIdx = 0;
+      let mcqPassageIdx = 0;
+      let mcqAnswers = [];
+
+      // 전체 문장 수 계산
+      EXAM.passages.forEach(p => { totalSentences += p.sentences.length; });
+
+      function currentPassage() { return EXAM.passages[passageIdx]; }
+      function currentSentence() { return currentPassage().sentences[sentenceIdx]; }
+
+      function updateProgress() {
+        const pct = totalSentences > 0 ? (completedSentences / totalSentences) * 100 : 0;
+        document.getElementById('progressBar').style.width = pct + '%';
+      }
+
+      function renderSentence() {
+        const passage = currentPassage();
+        const sentence = currentSentence();
+        hintIdx = 0;
+
+        document.getElementById('passageLabel').textContent =
+          `지문 ${passageIdx + 1}/${EXAM.passages.length} · 문장 ${sentenceIdx + 1}/${passage.sentences.length}`;
+        document.getElementById('englishSentence').textContent = sentence.english;
+        document.getElementById('hintArea').innerHTML = '';
+        document.getElementById('translationInput').value = '';
+        document.getElementById('translationInput').className = 'translation-input';
+        document.getElementById('feedbackBox').className = 'feedback-box';
+        document.getElementById('feedbackBox').textContent = '';
+        document.getElementById('btnNext').style.display = 'none';
+        document.getElementById('btnSubmit').style.display = '';
+        document.getElementById('btnSubmit').disabled = false;
+        document.getElementById('xpBadge').style.display = 'none';
+
+        const hasHints = sentence.hints && sentence.hints.length > 0;
+        document.getElementById('btnHint').disabled = !hasHints;
+
+        document.getElementById('translationInput').focus();
+      }
+
+      function showNextHint() {
+        const sentence = currentSentence();
+        if (!sentence.hints || hintIdx >= sentence.hints.length) return;
+
+        const hint = sentence.hints[hintIdx];
+        hintIdx++;
+
+        const area = document.getElementById('hintArea');
+        const chunk = document.createElement('span');
+        chunk.className = 'hint-chunk';
+        chunk.textContent = hint.chunk || '';
+        area.appendChild(chunk);
+
+        if (hint.question) {
+          const q = document.createElement('span');
+          q.className = 'hint-question';
+          q.textContent = hint.question;
+          area.appendChild(q);
+        }
+
+        if (hintIdx >= (sentence.hints ? sentence.hints.length : 0)) {
+          document.getElementById('btnHint').disabled = true;
+        }
+      }
+
+      async function submitTranslation() {
+        const input = document.getElementById('translationInput');
+        const korean = input.value.trim();
+        if (!korean) { input.focus(); return; }
+
+        document.getElementById('btnSubmit').disabled = true;
+
+        const sentence = currentSentence();
+        const res = await fetch('/evaluate-translation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            english: sentence.english,
+            korean,
+            model_answer: sentence.model_answer || '',
+          }),
+        });
+        const data = await res.json();
+
+        const feedbackBox = document.getElementById('feedbackBox');
+        const inputEl = document.getElementById('translationInput');
+
+        if (data.passed) {
+          inputEl.className = 'translation-input correct';
+          feedbackBox.className = 'feedback-box pass';
+          feedbackBox.textContent = data.feedback;
+          const xp = Math.max(10, 30 - hintIdx * 5);  // 힌트 덜 쓸수록 XP 많음
+          totalXp += xp;
+          correctCount++;
+          document.getElementById('xpBadge').textContent = `+${xp} XP`;
+          document.getElementById('xpBadge').style.display = '';
+        } else {
+          inputEl.className = 'translation-input wrong';
+          feedbackBox.className = 'feedback-box fail';
+          feedbackBox.textContent = data.feedback;
+        }
+
+        completedSentences++;
+        updateProgress();
+        document.getElementById('btnNext').style.display = '';
+        document.getElementById('btnSubmit').style.display = 'none';
+      }
+
+      function nextSentence() {
+        const passage = currentPassage();
+        sentenceIdx++;
+
+        if (sentenceIdx >= passage.sentences.length) {
+          // 지문 완료 → MCQ 또는 다음 지문
+          if (passage.comprehension_questions && passage.comprehension_questions.length > 0) {
+            showMcq(passageIdx);
+          } else {
+            moveToNextPassage();
+          }
+        } else {
+          renderSentence();
+        }
+      }
+
+      function moveToNextPassage() {
+        passageIdx++;
+        sentenceIdx = 0;
+        if (passageIdx >= EXAM.passages.length) {
+          showDone();
+        } else {
+          renderSentence();
+        }
+      }
+
+      // --- MCQ ---
+      function showMcq(pIdx) {
+        mcqPassageIdx = pIdx;
+        mcqIdx = 0;
+        mcqAnswers = [];
+        document.getElementById('readingCard').style.display = 'none';
+        document.getElementById('mcqCard').style.display = 'block';
+        renderMcq();
+      }
+
+      function renderMcq() {
+        const passage = EXAM.passages[mcqPassageIdx];
+        const qs = passage.comprehension_questions;
+        if (mcqIdx >= qs.length) {
+          // MCQ 완료 → 다음 지문
+          document.getElementById('mcqCard').style.display = 'none';
+          document.getElementById('readingCard').style.display = 'block';
+          passageIdx++;
+          sentenceIdx = 0;
+          if (passageIdx >= EXAM.passages.length) showDone();
+          else renderSentence();
+          return;
+        }
+
+        const q = qs[mcqIdx];
+        document.getElementById('mcqTitle').textContent = `이해도 확인 (${mcqIdx + 1}/${qs.length})`;
+        document.getElementById('mcqQuestion').textContent = q.question;
+        document.getElementById('mcqProgress').textContent = `지문 ${mcqPassageIdx + 1} 완독 후 이해도 문제`;
+
+        const opts = document.getElementById('mcqOptions');
+        opts.innerHTML = '';
+        (q.options || []).forEach((opt, i) => {
+          const div = document.createElement('div');
+          div.className = 'mcq-option';
+          div.textContent = `${i + 1}. ${opt}`;
+          div.onclick = () => selectMcqOption(i, q.correct_idx);
+          opts.appendChild(div);
+        });
+        document.getElementById('btnMcqNext').style.display = 'none';
+      }
+
+      function selectMcqOption(selectedIdx, correctIdx) {
+        // 이미 선택했으면 무시
+        if (document.querySelector('.mcq-option.correct')) return;
+
+        const opts = document.querySelectorAll('.mcq-option');
+        opts[correctIdx].className = 'mcq-option correct';
+        if (selectedIdx !== correctIdx) {
+          opts[selectedIdx].className = 'mcq-option wrong-selected';
+        } else {
+          totalXp += 20;  // MCQ 정답 XP
+          correctCount++;
+        }
+        opts.forEach(o => o.onclick = null);
+        document.getElementById('btnMcqNext').style.display = '';
+      }
+
+      function nextMcq() {
+        mcqIdx++;
+        renderMcq();
+      }
+
+      // --- 완료 화면 ---
+      function showDone() {
+        document.getElementById('readingCard').style.display = 'none';
+        document.getElementById('mcqCard').style.display = 'none';
+        document.getElementById('doneCard').style.display = 'block';
+
+        const accuracy = totalSentences > 0
+          ? Math.round((correctCount / totalSentences) * 100)
+          : 0;
+        document.getElementById('doneScore').textContent = accuracy + '%';
+        document.getElementById('doneTotalXp').textContent = totalXp;
+      }
+
+      function restart() {
+        passageIdx = 0;
+        sentenceIdx = 0;
+        hintIdx = 0;
+        completedSentences = 0;
+        totalXp = 0;
+        correctCount = 0;
+        document.getElementById('doneCard').style.display = 'none';
+        document.getElementById('readingCard').style.display = 'block';
+        updateProgress();
+        renderSentence();
+      }
+
+      // 엔터키로 제출
+      document.getElementById('translationInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          if (document.getElementById('btnSubmit').style.display !== 'none') {
+            submitTranslation();
+          } else {
+            nextSentence();
+          }
+        }
+      });
+
+      // 초기화
+      if (EXAM.passages.length > 0) {
+        updateProgress();
+        renderSentence();
+      } else {
+        document.getElementById('englishSentence').textContent = '등록된 지문이 없습니다.';
+      }
+    </script>
+  </body>
+</html>
