@@ -59,6 +59,14 @@ def evaluate(
             feedback="번역을 입력해 주세요.",
         )
 
+    # LLM 평가 우선 시도 (ANTHROPIC_API_KEY 없거나 실패 시 키워드 매칭 fallback)
+    try:
+        from llm import evaluate_with_llm
+        return evaluate_with_llm(english, chunk=english, korean=korean)
+    except Exception:
+        pass
+
+    # Fallback: 키워드 매칭 룰베이스
     score = _keyword_match_score(model_answer, korean)
     passed = score >= PASS_THRESHOLD
 

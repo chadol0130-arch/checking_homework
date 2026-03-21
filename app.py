@@ -1,19 +1,33 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import random
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+# .env 파일 자동 로드 (ANTHROPIC_API_KEY 등)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from werkzeug.utils import secure_filename
 
 from parser import parse_exam_pdf
 
+# 로깅 설정 (DEBUG 레벨로 parser/llm 로그 확인 가능)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB (수능 PDF 대응)
 
 # --- Paths / Storage ---
 BASE_DIR = Path(__file__).resolve().parent
@@ -211,6 +225,47 @@ def exam_list_json() -> Any:
             "passage_count": len(data.get("passages", [])),
         })
     return jsonify(exams)
+
+
+@app.route("/exam/generate-chunks", methods=["POST"])
+def generate_chunks_endpoint() -> Any:
+    """
+    영어 문장 목록을 받아 Claude가 각 문장을 의미 청크로 분리하고
+    모범 번역을 자동 생성합니다.
+
+    Request JSON: { "sentences": ["sentence1", "sentence2", ...] }
+    Response JSON: { "results": [{ "english", "model_answer", "chunks": [...] }, ...] }
+    """
+    from llm import generate_chunks, generate_model_answer
+
+    data = request.get_json(silent=True)
+    if not data or "sentences" not in data:
+        return jsonify({"error": "'sentences' 필드가 필요합니다."}), 400
+
+    sentences = data["sentences"]
+    if not isinstance(sentences, list):
+        return jsonify({"error": "'sentences'는 배열이어야 합니다."}), 400
+
+    results = []
+    for sentence in sentences:
+        try:
+            chunks = generate_chunks(sentence)
+            model_answer = generate_model_answer(sentence)
+            results.append({
+                "english": sentence,
+                "model_answer": model_answer,
+                "chunks": chunks,
+            })
+        except Exception as e:
+            # 개별 문장 오류는 빈 chunks로 처리 (전체 요청 실패 방지)
+            results.append({
+                "english": sentence,
+                "model_answer": "",
+                "chunks": [],
+                "error": str(e),
+            })
+
+    return jsonify({"results": results})
 
 
 @app.route("/evaluate-translation", methods=["POST"])

@@ -6,6 +6,76 @@
     <title>직독직해 연습</title>
     <link rel="stylesheet" href="/static/style.css" />
     <style>
+      /* ────── 지문 읽기 화면 (passageCard) ────── */
+      .passage-card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: var(--shadow);
+        max-width: 720px;
+        margin: 0 auto;
+        display: none;
+      }
+      .passage-num-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--primary);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .passage-title-row {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .passage-title-row h2 {
+        margin: 0;
+        font-size: 22px;
+      }
+      .passage-title-row .passage-sub {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .passage-text-body {
+        font-size: 17px;
+        line-height: 2.0;
+        color: var(--text);
+        padding: 22px 26px;
+        background: #f8f9ff;
+        border-radius: 14px;
+        border-left: 4px solid var(--primary);
+        margin-bottom: 24px;
+        white-space: pre-wrap;
+      }
+      .passage-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .sentence-count-info {
+        font-size: 13px;
+        color: var(--muted);
+        background: #f1f5f9;
+        padding: 6px 14px;
+        border-radius: 20px;
+      }
+      .btn-start-reading {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        padding: 12px 32px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .btn-start-reading:hover { background: #3a5eef; }
+
       .reading-card {
         background: var(--card);
         border-radius: 20px;
@@ -138,6 +208,87 @@
         display: none;
       }
 
+      /* ────── 청크 모드 (Duolingo 스타일) ────── */
+      .chunk-display { display: none; }
+      .full-sentence-context {
+        font-size: 15px;
+        color: #9ca3af;
+        line-height: 1.8;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        margin-bottom: 14px;
+      }
+      .current-chunk-highlight {
+        display: inline-block;
+        background: #fef08a;
+        border-radius: 10px;
+        padding: 8px 18px;
+        font-size: 22px;
+        font-weight: 700;
+        margin: 6px 0 16px;
+        border-bottom: 3px solid #eab308;
+        line-height: 1.5;
+      }
+      .chunk-input-area {
+        margin-bottom: 4px;
+      }
+      .chunk-translation-input {
+        border: none;
+        border-bottom: 3px solid #ef4444;
+        background: transparent;
+        font-size: 19px;
+        padding: 6px 4px;
+        outline: none;
+        width: 100%;
+        max-width: 420px;
+        color: #1e293b;
+        font-family: inherit;
+        transition: border-color 0.2s;
+      }
+      .chunk-translation-input::placeholder { color: #cbd5e1; }
+      .chunk-translation-input.correct { border-bottom-color: #22c55e; color: #166534; }
+      .chunk-translation-input.wrong   { border-bottom-color: #ef4444; color: #991b1b; }
+      .completed-chunks {
+        margin-top: 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .completed-chunk-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+      }
+      .completed-chunk-en {
+        font-size: 12px;
+        color: #6b7280;
+        background: #f3f4f6;
+        padding: 3px 10px;
+        border-radius: 6px;
+      }
+      .completed-chunk-ko {
+        font-size: 13px;
+        color: #065f46;
+        font-weight: 600;
+      }
+      .chunk-progress-dots {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .chunk-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        transition: background 0.2s;
+      }
+      .chunk-dot.done { background: #22c55e; }
+      .chunk-dot.active { background: #eab308; }
+
       /* MCQ 화면 */
       .mcq-card {
         background: var(--card);
@@ -197,16 +348,50 @@
 
     <div class="container" style="padding-top:32px;">
 
+      <!-- 지문 읽기 카드 (직독직해 시작 전) -->
+      <div class="passage-card" id="passageCard">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="passageProgressBar" style="width:0%"></div>
+        </div>
+        <div class="passage-num-label" id="passageNumLabel">20번 지문</div>
+        <div class="passage-title-row">
+          <h2>지문 읽기</h2>
+          <span class="passage-sub">전체 지문을 먼저 읽고 직독직해를 시작하세요</span>
+        </div>
+        <div class="passage-text-body" id="passageTextBody"></div>
+        <div class="passage-card-footer">
+          <span class="sentence-count-info" id="sentenceCountInfo">문장 0개</span>
+          <button class="btn-start-reading" onclick="startReading()">직독직해 시작 →</button>
+        </div>
+      </div>
+
       <!-- 직독직해 연습 카드 -->
       <div class="reading-card" id="readingCard">
         <div class="progress-bar-wrap">
           <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
         </div>
         <div class="passage-label" id="passageLabel"></div>
-        <div class="english-sentence" id="englishSentence">로딩 중...</div>
-        <div class="hint-area" id="hintArea"></div>
-        <input type="text" class="translation-input" id="translationInput"
-               placeholder="직독직해로 번역해 보세요" autocomplete="off" />
+
+        <!-- 레거시 모드: 문장 전체 번역 -->
+        <div id="legacyMode">
+          <div class="english-sentence" id="englishSentence">로딩 중...</div>
+          <div class="hint-area" id="hintArea"></div>
+          <input type="text" class="translation-input" id="translationInput"
+                 placeholder="직독직해로 번역해 보세요" autocomplete="off" />
+        </div>
+
+        <!-- 청크 모드: Duolingo 스타일 -->
+        <div class="chunk-display" id="chunkDisplay">
+          <div class="full-sentence-context" id="fullSentenceContext"></div>
+          <div class="chunk-progress-dots" id="chunkDots"></div>
+          <div class="current-chunk-highlight" id="currentChunk"></div>
+          <div class="chunk-input-area">
+            <input type="text" class="chunk-translation-input" id="chunkInput"
+                   placeholder="번역 입력..." autocomplete="off" />
+          </div>
+          <div class="completed-chunks" id="completedChunks"></div>
+        </div>
+
         <div class="feedback-box" id="feedbackBox"></div>
         <div class="btn-row">
           <button class="btn-hint" id="btnHint" onclick="showNextHint()">힌트 보기</button>
@@ -245,6 +430,7 @@
     <script>
       const EXAM = {{ exam | tojson }};
 
+      // ─── 전역 상태 ───────────────────────────────────────────────
       let passageIdx = 0;
       let sentenceIdx = 0;
       let hintIdx = 0;
@@ -256,28 +442,33 @@
       let mcqPassageIdx = 0;
       let mcqAnswers = [];
 
-      // 전체 문장 수 계산
+      // 청크 모드 전용 상태
+      let chunkIdx = 0;
+      let chunkResults = [];   // [{passed, korean, modelKorean}]
+
       EXAM.passages.forEach(p => { totalSentences += p.sentences.length; });
 
       function currentPassage() { return EXAM.passages[passageIdx]; }
       function currentSentence() { return currentPassage().sentences[sentenceIdx]; }
+      function isChunkMode(sentence) {
+        return sentence.chunks && sentence.chunks.length > 0;
+      }
 
+      // ─── 진행도 ────────────────────────────────────────────────
       function updateProgress() {
         const pct = totalSentences > 0 ? (completedSentences / totalSentences) * 100 : 0;
         document.getElementById('progressBar').style.width = pct + '%';
       }
 
+      // ─── 문장 렌더링 (모드 분기) ────────────────────────────────
       function renderSentence() {
         const passage = currentPassage();
         const sentence = currentSentence();
         hintIdx = 0;
+        chunkIdx = 0;
+        chunkResults = [];
 
-        document.getElementById('passageLabel').textContent =
-          `지문 ${passageIdx + 1}/${EXAM.passages.length} · 문장 ${sentenceIdx + 1}/${passage.sentences.length}`;
-        document.getElementById('englishSentence').textContent = sentence.english;
-        document.getElementById('hintArea').innerHTML = '';
-        document.getElementById('translationInput').value = '';
-        document.getElementById('translationInput').className = 'translation-input';
+        // 공통 초기화
         document.getElementById('feedbackBox').className = 'feedback-box';
         document.getElementById('feedbackBox').textContent = '';
         document.getElementById('btnNext').style.display = 'none';
@@ -285,45 +476,191 @@
         document.getElementById('btnSubmit').disabled = false;
         document.getElementById('xpBadge').style.display = 'none';
 
+        if (isChunkMode(sentence)) {
+          renderChunkMode(passage, sentence);
+        } else {
+          renderLegacyMode(passage, sentence);
+        }
+      }
+
+      // ─── 레거시 모드 ────────────────────────────────────────────
+      function renderLegacyMode(passage, sentence) {
+        document.getElementById('legacyMode').style.display = '';
+        document.getElementById('chunkDisplay').style.display = 'none';
+        document.getElementById('btnHint').style.display = '';
+
+        document.getElementById('passageLabel').textContent =
+          `지문 ${passageIdx + 1}/${EXAM.passages.length} · 문장 ${sentenceIdx + 1}/${passage.sentences.length}`;
+        document.getElementById('englishSentence').textContent = sentence.english;
+        document.getElementById('hintArea').innerHTML = '';
+        document.getElementById('translationInput').value = '';
+        document.getElementById('translationInput').className = 'translation-input';
+
         const hasHints = sentence.hints && sentence.hints.length > 0;
         document.getElementById('btnHint').disabled = !hasHints;
-
         document.getElementById('translationInput').focus();
       }
 
       function showNextHint() {
         const sentence = currentSentence();
         if (!sentence.hints || hintIdx >= sentence.hints.length) return;
-
         const hint = sentence.hints[hintIdx];
         hintIdx++;
-
         const area = document.getElementById('hintArea');
         const chunk = document.createElement('span');
         chunk.className = 'hint-chunk';
         chunk.textContent = hint.chunk || '';
         area.appendChild(chunk);
-
         if (hint.question) {
           const q = document.createElement('span');
           q.className = 'hint-question';
           q.textContent = hint.question;
           area.appendChild(q);
         }
-
-        if (hintIdx >= (sentence.hints ? sentence.hints.length : 0)) {
+        if (hintIdx >= sentence.hints.length) {
           document.getElementById('btnHint').disabled = true;
         }
       }
 
+      // ─── 청크 모드 ────────────────────────────────────────────
+      function renderChunkMode(passage, sentence) {
+        document.getElementById('legacyMode').style.display = 'none';
+        document.getElementById('chunkDisplay').style.display = '';
+        document.getElementById('btnHint').style.display = 'none';  // 힌트 버튼 숨김
+
+        document.getElementById('passageLabel').textContent =
+          `지문 ${passageIdx + 1}/${EXAM.passages.length} · 문장 ${sentenceIdx + 1}/${passage.sentences.length}`;
+        document.getElementById('fullSentenceContext').textContent = sentence.english;
+        document.getElementById('completedChunks').innerHTML = '';
+
+        renderChunkDots(sentence.chunks.length, 0);
+        renderCurrentChunk(sentence);
+      }
+
+      function renderChunkDots(total, current) {
+        const dotsEl = document.getElementById('chunkDots');
+        dotsEl.innerHTML = '';
+        for (let i = 0; i < total; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'chunk-dot' + (i < current ? ' done' : i === current ? ' active' : '');
+          dotsEl.appendChild(dot);
+        }
+      }
+
+      function renderCurrentChunk(sentence) {
+        const chunk = sentence.chunks[chunkIdx];
+        document.getElementById('currentChunk').textContent = chunk.english;
+        renderChunkDots(sentence.chunks.length, chunkIdx);
+
+        const input = document.getElementById('chunkInput');
+        input.value = '';
+        input.className = 'chunk-translation-input';
+        input.focus();
+
+        document.getElementById('feedbackBox').className = 'feedback-box';
+        document.getElementById('feedbackBox').textContent = '';
+        document.getElementById('btnNext').style.display = 'none';
+        document.getElementById('btnSubmit').style.display = '';
+        document.getElementById('btnSubmit').disabled = false;
+      }
+
+      // ─── 번역 제출 (모드 분기) ────────────────────────────────
       async function submitTranslation() {
+        const sentence = currentSentence();
+        if (isChunkMode(sentence)) {
+          await submitChunkTranslation(sentence);
+        } else {
+          await submitLegacyTranslation(sentence);
+        }
+      }
+
+      async function submitChunkTranslation(sentence) {
+        const input = document.getElementById('chunkInput');
+        const korean = input.value.trim();
+        if (!korean) { input.focus(); return; }
+
+        document.getElementById('btnSubmit').disabled = true;
+
+        const chunk = sentence.chunks[chunkIdx];
+        const res = await fetch('/evaluate-translation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            english: chunk.english,
+            korean,
+            model_answer: chunk.korean || '',
+          }),
+        });
+        const data = await res.json();
+
+        const feedbackBox = document.getElementById('feedbackBox');
+        input.className = 'chunk-translation-input ' + (data.passed ? 'correct' : 'wrong');
+        feedbackBox.className = 'feedback-box ' + (data.passed ? 'pass' : 'fail');
+
+        chunkResults.push({ passed: data.passed, korean, modelKorean: chunk.korean });
+
+        if (data.passed) {
+          feedbackBox.textContent = '맞았어요! ✓';
+          // 0.8초 후 자동으로 다음 청크 진행
+          setTimeout(() => advanceChunk(sentence), 800);
+        } else {
+          feedbackBox.textContent = data.feedback || `참고: ${chunk.korean}`;
+          document.getElementById('btnNext').textContent = '다음 청크 →';
+          document.getElementById('btnNext').onclick = () => advanceChunk(sentence);
+          document.getElementById('btnNext').style.display = '';
+          document.getElementById('btnSubmit').style.display = 'none';
+        }
+      }
+
+      function advanceChunk(sentence) {
+        // 완료된 청크를 하단에 추가
+        const completedEl = document.getElementById('completedChunks');
+        const chunk = sentence.chunks[chunkIdx];
+        const result = chunkResults[chunkIdx];
+        const item = document.createElement('div');
+        item.className = 'completed-chunk-item';
+        item.innerHTML =
+          `<span class="completed-chunk-en">${escHtml(chunk.english)}</span>` +
+          `<span class="completed-chunk-ko">${escHtml(result?.korean || chunk.korean)}</span>`;
+        completedEl.appendChild(item);
+
+        chunkIdx++;
+
+        if (chunkIdx >= sentence.chunks.length) {
+          // 문장의 모든 청크 완료
+          const allPassed = chunkResults.every(r => r.passed);
+          const xp = allPassed ? 30 : 10;
+          totalXp += xp;
+          if (allPassed) correctCount++;
+          completedSentences++;
+          updateProgress();
+
+          document.getElementById('xpBadge').textContent = `+${xp} XP`;
+          document.getElementById('xpBadge').style.display = '';
+          document.getElementById('btnNext').textContent = '다음 문장 →';
+          document.getElementById('btnNext').onclick = nextSentence;
+          document.getElementById('btnNext').style.display = '';
+          document.getElementById('btnSubmit').style.display = 'none';
+          document.getElementById('currentChunk').textContent = '';
+          document.getElementById('chunkInput').style.display = 'none';
+          document.getElementById('feedbackBox').className = 'feedback-box pass';
+          document.getElementById('feedbackBox').textContent = allPassed
+            ? `🎉 완벽해요! +${xp} XP 획득!`
+            : `문장 완료! +${xp} XP 획득`;
+          renderChunkDots(sentence.chunks.length, sentence.chunks.length);
+        } else {
+          document.getElementById('chunkInput').style.display = '';
+          renderCurrentChunk(sentence);
+        }
+      }
+
+      async function submitLegacyTranslation(sentence) {
         const input = document.getElementById('translationInput');
         const korean = input.value.trim();
         if (!korean) { input.focus(); return; }
 
         document.getElementById('btnSubmit').disabled = true;
 
-        const sentence = currentSentence();
         const res = await fetch('/evaluate-translation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -342,7 +679,7 @@
           inputEl.className = 'translation-input correct';
           feedbackBox.className = 'feedback-box pass';
           feedbackBox.textContent = data.feedback;
-          const xp = Math.max(10, 30 - hintIdx * 5);  // 힌트 덜 쓸수록 XP 많음
+          const xp = Math.max(10, 30 - hintIdx * 5);
           totalXp += xp;
           correctCount++;
           document.getElementById('xpBadge').textContent = `+${xp} XP`;
@@ -355,16 +692,45 @@
 
         completedSentences++;
         updateProgress();
+        document.getElementById('btnNext').textContent = '다음 문장 →';
+        document.getElementById('btnNext').onclick = nextSentence;
         document.getElementById('btnNext').style.display = '';
         document.getElementById('btnSubmit').style.display = 'none';
       }
 
+      // ─── 지문 읽기 화면 ─────────────────────────────────────
+      function showPassage() {
+        const passage = currentPassage();
+
+        document.getElementById('passageCard').style.display = 'block';
+        document.getElementById('readingCard').style.display = 'none';
+        document.getElementById('mcqCard').style.display = 'none';
+
+        document.getElementById('passageNumLabel').textContent =
+          `${passage.question_num}번 지문 · ${passageIdx + 1}/${EXAM.passages.length}`;
+        document.getElementById('passageTextBody').textContent = passage.original_text || passage.sentences.join(' ');
+        document.getElementById('sentenceCountInfo').textContent =
+          `문장 ${passage.sentences.length}개`;
+
+        // 지문 단위 진행도 표시
+        const pct = (passageIdx / EXAM.passages.length) * 100;
+        document.getElementById('passageProgressBar').style.width = pct + '%';
+      }
+
+      function startReading() {
+        document.getElementById('passageCard').style.display = 'none';
+        document.getElementById('readingCard').style.display = 'block';
+        sentenceIdx = 0;
+        chunkIdx = 0;
+        chunkResults = [];
+        renderSentence();
+      }
+
+      // ─── 문장/지문 이동 ────────────────────────────────────────
       function nextSentence() {
         const passage = currentPassage();
         sentenceIdx++;
-
         if (sentenceIdx >= passage.sentences.length) {
-          // 지문 완료 → MCQ 또는 다음 지문
           if (passage.comprehension_questions && passage.comprehension_questions.length > 0) {
             showMcq(passageIdx);
           } else {
@@ -381,11 +747,11 @@
         if (passageIdx >= EXAM.passages.length) {
           showDone();
         } else {
-          renderSentence();
+          showPassage();  // 다음 지문도 읽기 화면 먼저
         }
       }
 
-      // --- MCQ ---
+      // ─── MCQ ──────────────────────────────────────────────────
       function showMcq(pIdx) {
         mcqPassageIdx = pIdx;
         mcqIdx = 0;
@@ -399,7 +765,6 @@
         const passage = EXAM.passages[mcqPassageIdx];
         const qs = passage.comprehension_questions;
         if (mcqIdx >= qs.length) {
-          // MCQ 완료 → 다음 지문
           document.getElementById('mcqCard').style.display = 'none';
           document.getElementById('readingCard').style.display = 'block';
           passageIdx++;
@@ -408,12 +773,10 @@
           else renderSentence();
           return;
         }
-
         const q = qs[mcqIdx];
         document.getElementById('mcqTitle').textContent = `이해도 확인 (${mcqIdx + 1}/${qs.length})`;
         document.getElementById('mcqQuestion').textContent = q.question;
         document.getElementById('mcqProgress').textContent = `지문 ${mcqPassageIdx + 1} 완독 후 이해도 문제`;
-
         const opts = document.getElementById('mcqOptions');
         opts.innerHTML = '';
         (q.options || []).forEach((opt, i) => {
@@ -427,68 +790,75 @@
       }
 
       function selectMcqOption(selectedIdx, correctIdx) {
-        // 이미 선택했으면 무시
         if (document.querySelector('.mcq-option.correct')) return;
-
         const opts = document.querySelectorAll('.mcq-option');
         opts[correctIdx].className = 'mcq-option correct';
         if (selectedIdx !== correctIdx) {
           opts[selectedIdx].className = 'mcq-option wrong-selected';
         } else {
-          totalXp += 20;  // MCQ 정답 XP
+          totalXp += 20;
           correctCount++;
         }
         opts.forEach(o => o.onclick = null);
         document.getElementById('btnMcqNext').style.display = '';
       }
 
-      function nextMcq() {
-        mcqIdx++;
-        renderMcq();
-      }
+      function nextMcq() { mcqIdx++; renderMcq(); }
 
-      // --- 완료 화면 ---
+      // ─── 완료 화면 ────────────────────────────────────────────
       function showDone() {
         document.getElementById('readingCard').style.display = 'none';
         document.getElementById('mcqCard').style.display = 'none';
         document.getElementById('doneCard').style.display = 'block';
-
         const accuracy = totalSentences > 0
-          ? Math.round((correctCount / totalSentences) * 100)
-          : 0;
+          ? Math.round((correctCount / totalSentences) * 100) : 0;
         document.getElementById('doneScore').textContent = accuracy + '%';
         document.getElementById('doneTotalXp').textContent = totalXp;
       }
 
       function restart() {
-        passageIdx = 0;
-        sentenceIdx = 0;
-        hintIdx = 0;
-        completedSentences = 0;
-        totalXp = 0;
-        correctCount = 0;
+        passageIdx = 0; sentenceIdx = 0; hintIdx = 0;
+        chunkIdx = 0; chunkResults = [];
+        completedSentences = 0; totalXp = 0; correctCount = 0;
         document.getElementById('doneCard').style.display = 'none';
-        document.getElementById('readingCard').style.display = 'block';
+        document.getElementById('readingCard').style.display = 'none';
+        document.getElementById('chunkInput').style.display = '';
         updateProgress();
-        renderSentence();
+        showPassage();  // 처음 지문 읽기 화면부터 다시
       }
 
-      // 엔터키로 제출
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      // 엔터키 제출 (레거시 모드)
       document.getElementById('translationInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-          if (document.getElementById('btnSubmit').style.display !== 'none') {
+          if (document.getElementById('btnSubmit').style.display !== 'none' &&
+              !document.getElementById('btnSubmit').disabled) {
             submitTranslation();
-          } else {
-            nextSentence();
           }
         }
       });
 
-      // 초기화
+      // 엔터키 제출 (청크 모드)
+      document.getElementById('chunkInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          if (document.getElementById('btnSubmit').style.display !== 'none' &&
+              !document.getElementById('btnSubmit').disabled) {
+            submitTranslation();
+          }
+        }
+      });
+
+      // ─── 초기화 ───────────────────────────────────────────────
       if (EXAM.passages.length > 0) {
         updateProgress();
-        renderSentence();
+        showPassage();  // 지문 읽기 화면 먼저
       } else {
+        document.getElementById('readingCard').style.display = 'block';
         document.getElementById('englishSentence').textContent = '등록된 지문이 없습니다.';
       }
     </script>
