@@ -34,10 +34,10 @@ class ChunkItem(TypedDict):
 # ---------------------------------------------------------------------------
 # 모델 상수 (교체 시 이 부분만 변경)
 # ---------------------------------------------------------------------------
-_PDF_MODEL    = "claude-opus-4-5"   # PDF 파싱: Vision 지원 모델
-_CHUNK_MODEL  = "claude-opus-4-5"   # 청크 분리: 정확도 우선
-_ANSWER_MODEL = "claude-haiku-4-5"  # 모범 번역: 속도 우선
-_EVAL_MODEL   = "claude-haiku-4-5"  # 번역 평가: 속도 우선
+_PDF_MODEL    = "claude-opus-4-6"            # PDF 파싱: Vision 지원 최신 모델
+_CHUNK_MODEL  = "claude-sonnet-4-6"          # 청크 분리: 정확도 우선
+_ANSWER_MODEL = "claude-haiku-4-5-20251001"  # 모범 번역: 속도 우선
+_EVAL_MODEL   = "claude-haiku-4-5-20251001"  # 번역 평가: 속도 우선
 
 
 # ---------------------------------------------------------------------------
@@ -382,5 +382,6 @@ def evaluate_with_llm(english: str, chunk: str, korean: str) -> EvaluationResult
         return EvaluationResult(passed=passed, score=round(score, 2), feedback=feedback)
 
     except Exception as e:
-        # LLM 실패 시 fallback (evaluator.py의 키워드 매칭)
+        import logging
+        logging.getLogger(__name__).error("evaluate_with_llm 실패: %s | type=%s", e, type(e).__name__)
         raise  # 상위 호출자가 fallback 처리

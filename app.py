@@ -268,6 +268,54 @@ def generate_chunks_endpoint() -> Any:
     return jsonify({"results": results})
 
 
+@app.route("/exam/<exam_id>/session", methods=["POST"])
+def save_session(exam_id: str) -> Any:
+    """
+    학습 세션 결과를 저장합니다.
+    추후 '어떤 청크에서 자주 틀리는지' 분석에 활용합니다.
+
+    Request JSON:
+      {
+        "session_log": [
+          {
+            "passageNum": int, "sentenceIdx": int, "english": str,
+            "mode": "chunk"|"legacy",
+            "chunks": [{"english", "modelKorean", "studentKorean", "passed"}],  # chunk mode
+            "allPassed": bool,                                                   # chunk mode
+            "studentKorean": str, "modelAnswer": str, "passed": bool            # legacy mode
+          }, ...
+        ],
+        "total_xp": int, "accuracy": float
+      }
+    """
+    import json, re
+    if not re.fullmatch(r'[a-f0-9]{12}', exam_id):
+        return jsonify({"error": "잘못된 exam_id"}), 400
+
+    data = request.get_json(silent=True)
+    if not data or "session_log" not in data:
+        return jsonify({"error": "'session_log' 필드가 필요합니다."}), 400
+
+    sessions_dir = BASE_DIR / "data" / "sessions"
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+
+    session_id = hashlib.sha1(os.urandom(16)).hexdigest()[:12]
+    session_data = {
+        "session_id": session_id,
+        "exam_id": exam_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "total_xp": data.get("total_xp", 0),
+        "accuracy": data.get("accuracy", 0.0),
+        "session_log": data["session_log"],
+    }
+
+    session_path = sessions_dir / f"{exam_id}_{session_id}.json"
+    with session_path.open("w", encoding="utf-8") as f:
+        json.dump(session_data, f, ensure_ascii=False, indent=2)
+
+    return jsonify({"session_id": session_id, "message": "세션이 저장되었습니다."})
+
+
 @app.route("/evaluate-translation", methods=["POST"])
 def evaluate_translation() -> Any:
     """

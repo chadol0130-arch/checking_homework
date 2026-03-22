@@ -67,8 +67,20 @@ def evaluate(
         pass
 
     # Fallback: 키워드 매칭 룰베이스
-    score = _keyword_match_score(model_answer, korean)
-    passed = score >= PASS_THRESHOLD
+    if model_answer and model_answer.strip():
+        # 참고 번역이 있으면 키워드 매칭
+        score = _keyword_match_score(model_answer, korean)
+        passed = score >= PASS_THRESHOLD
+    else:
+        # 참고 번역이 없으면 기본 품질 체크 (LLM 없이는 정확한 채점 불가)
+        korean_chars = sum(1 for c in korean if "\uAC00" <= c <= "\uD7A3")
+        word_count = len(korean.split())
+        if word_count >= 3 and korean_chars >= 4:
+            score = 0.6   # 최소한 길이와 한글 조건 충족
+            passed = True
+        else:
+            score = 0.2
+            passed = False
 
     feedback = _build_feedback(passed, score, english, model_answer)
     return EvaluationResult(passed=passed, score=round(score, 2), feedback=feedback)

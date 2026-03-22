@@ -330,6 +330,177 @@
         color: var(--primary);
         line-height: 1;
       }
+
+      /* ────── 결과 검토 화면 ────── */
+      .review-card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: var(--shadow);
+        max-width: 720px;
+        margin: 0 auto;
+        display: none;
+      }
+      .review-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+      .review-header h2 { margin: 0; }
+      .btn-back-review {
+        background: none;
+        border: 1px solid #dde2f0;
+        border-radius: 10px;
+        padding: 8px 16px;
+        font-size: 13px;
+        cursor: pointer;
+        color: var(--text);
+      }
+      .weakness-box {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 24px;
+      }
+      .weakness-box.perfect {
+        background: #d1fae5;
+        border-color: #6ee7b7;
+        text-align: center;
+        font-weight: 600;
+        color: #065f46;
+        font-size: 16px;
+        padding: 22px;
+      }
+      .weakness-box h3 {
+        margin: 0 0 14px;
+        font-size: 15px;
+        color: #c2410c;
+      }
+      .weakness-item {
+        background: #fff;
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+        border-left: 3px solid #f97316;
+      }
+      .weakness-en {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 6px;
+      }
+      .weakness-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 13px;
+      }
+      .weakness-student { color: #991b1b; text-decoration: line-through; }
+      .weakness-arrow { color: #9ca3af; }
+      .weakness-model { color: #065f46; font-weight: 600; }
+      .review-passage-section {
+        border: 1px solid #e0e7ff;
+        border-radius: 14px;
+        margin-bottom: 16px;
+        overflow: hidden;
+      }
+      .review-passage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 15px;
+        background: #f8f9ff;
+        user-select: none;
+      }
+      .review-passage-header:hover { background: #eef2ff; }
+      .review-passage-score {
+        padding: 3px 12px;
+        border-radius: 99px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .review-passage-score.perfect { background: #d1fae5; color: #065f46; }
+      .review-passage-score.good    { background: #fef9c3; color: #854d0e; }
+      .review-passage-score.poor    { background: #fee2e2; color: #991b1b; }
+      .review-passage-body { padding: 12px 18px; }
+      .review-passage-body.hidden { display: none; }
+      .review-sentence {
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+        border-left: 4px solid #e2e8f0;
+      }
+      .review-sentence.passed { border-left-color: #22c55e; background: #f0fff4; }
+      .review-sentence.failed { border-left-color: #ef4444; background: #fff5f5; }
+      .review-sentence-en {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 8px;
+        line-height: 1.6;
+      }
+      .review-chunks {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .review-chunk {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        flex-wrap: wrap;
+      }
+      .review-chunk-en {
+        background: #f1f5f9;
+        padding: 2px 10px;
+        border-radius: 6px;
+        color: #64748b;
+        min-width: 80px;
+      }
+      .review-chunk-student { font-weight: 600; }
+      .review-chunk.passed .review-chunk-student { color: #166534; }
+      .review-chunk.failed .review-chunk-student { color: #991b1b; text-decoration: line-through; }
+      .review-chunk-model { color: #065f46; font-size: 12px; }
+      .review-legacy {
+        font-size: 13px;
+        color: #475569;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .review-stats-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+      .review-stat {
+        background: #f8f9ff;
+        border-radius: 12px;
+        padding: 12px 18px;
+        text-align: center;
+        flex: 1;
+        min-width: 100px;
+      }
+      .review-stat-num {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--primary);
+        line-height: 1;
+      }
+      .review-stat-label {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
     </style>
   </head>
   <body>
@@ -419,10 +590,22 @@
         <div class="big-num" id="doneScore">-</div>
         <div style="font-size:16px; color:var(--muted); margin:8px 0 24px;">정답률</div>
         <div style="font-size:18px; font-weight:700; color:var(--accent);">+<span id="doneTotalXp">0</span> XP 획득!</div>
-        <div style="margin-top:28px; display:flex; gap:12px; justify-content:center;">
+        <div style="margin-top:28px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
           <a href="/exam" style="padding:10px 20px; border:1px solid #dde2f0; border-radius:10px; text-decoration:none; color:var(--text); font-weight:600;">목록으로</a>
           <button onclick="restart()" style="padding:10px 20px; background:var(--primary); color:#fff; border:none; border-radius:10px; font-weight:600; cursor:pointer;">다시 풀기</button>
+          <button onclick="showReview()" style="padding:10px 20px; background:#f0fdf4; color:#166534; border:1px solid #86efac; border-radius:10px; font-weight:600; cursor:pointer;">결과 검토 →</button>
         </div>
+      </div>
+
+      <!-- 결과 검토 카드 -->
+      <div class="review-card" id="reviewCard">
+        <div class="review-header">
+          <h2>결과 검토</h2>
+          <button class="btn-back-review" onclick="document.getElementById('reviewCard').style.display='none'; document.getElementById('doneCard').style.display='block';">← 결과로</button>
+        </div>
+        <div class="review-stats-row" id="reviewStatsRow"></div>
+        <div id="weaknessSummary"></div>
+        <div id="reviewPassages"></div>
       </div>
 
     </div>
@@ -445,6 +628,12 @@
       // 청크 모드 전용 상태
       let chunkIdx = 0;
       let chunkResults = [];   // [{passed, korean, modelKorean}]
+
+      // 세션 로그 (결과 검토용)
+      let sessionLog = [];
+      // 형식: [{passageNum, sentenceIdx, english, mode:'chunk'|'legacy',
+      //         chunks:[{english,modelKorean,studentKorean,passed}], allPassed,
+      //         studentKorean(legacy), modelAnswer(legacy), passed(legacy), score(legacy)}]
 
       EXAM.passages.forEach(p => { totalSentences += p.sentences.length; });
 
@@ -607,7 +796,7 @@
           feedbackBox.textContent = data.feedback || `참고: ${chunk.korean}`;
           document.getElementById('btnNext').textContent = '다음 청크 →';
           document.getElementById('btnNext').onclick = () => advanceChunk(sentence);
-          document.getElementById('btnNext').style.display = '';
+          document.getElementById('btnNext').style.display = 'inline-block';
           document.getElementById('btnSubmit').style.display = 'none';
         }
       }
@@ -633,13 +822,28 @@
           totalXp += xp;
           if (allPassed) correctCount++;
           completedSentences++;
+
+          // 세션 로그 기록
+          sessionLog.push({
+            passageNum: currentPassage().question_num,
+            sentenceIdx,
+            english: sentence.english,
+            mode: 'chunk',
+            chunks: sentence.chunks.map((c, i) => ({
+              english: c.english,
+              modelKorean: c.korean || '',
+              studentKorean: chunkResults[i]?.korean || '',
+              passed: chunkResults[i]?.passed ?? false,
+            })),
+            allPassed,
+          });
           updateProgress();
 
           document.getElementById('xpBadge').textContent = `+${xp} XP`;
           document.getElementById('xpBadge').style.display = '';
           document.getElementById('btnNext').textContent = '다음 문장 →';
           document.getElementById('btnNext').onclick = nextSentence;
-          document.getElementById('btnNext').style.display = '';
+          document.getElementById('btnNext').style.display = 'inline-block';
           document.getElementById('btnSubmit').style.display = 'none';
           document.getElementById('currentChunk').textContent = '';
           document.getElementById('chunkInput').style.display = 'none';
@@ -692,9 +896,23 @@
 
         completedSentences++;
         updateProgress();
+
+        // 레거시 모드 세션 로그 기록
+        sessionLog.push({
+          passageNum: currentPassage().question_num,
+          sentenceIdx,
+          english: sentence.english,
+          mode: 'legacy',
+          studentKorean: korean,
+          modelAnswer: sentence.model_answer || '',
+          passed: data.passed,
+          score: data.score || 0,
+          feedback: data.feedback || '',
+        });
+
         document.getElementById('btnNext').textContent = '다음 문장 →';
         document.getElementById('btnNext').onclick = nextSentence;
-        document.getElementById('btnNext').style.display = '';
+        document.getElementById('btnNext').style.display = 'inline-block';
         document.getElementById('btnSubmit').style.display = 'none';
       }
 
@@ -814,17 +1032,144 @@
           ? Math.round((correctCount / totalSentences) * 100) : 0;
         document.getElementById('doneScore').textContent = accuracy + '%';
         document.getElementById('doneTotalXp').textContent = totalXp;
+
+        // 세션 자동 저장 (백그라운드, 실패해도 무시)
+        fetch(`/exam/${EXAM.exam_id}/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_log: sessionLog, total_xp: totalXp, accuracy }),
+        }).catch(() => {});
       }
 
       function restart() {
         passageIdx = 0; sentenceIdx = 0; hintIdx = 0;
-        chunkIdx = 0; chunkResults = [];
+        chunkIdx = 0; chunkResults = []; sessionLog = [];
         completedSentences = 0; totalXp = 0; correctCount = 0;
         document.getElementById('doneCard').style.display = 'none';
+        document.getElementById('reviewCard').style.display = 'none';
         document.getElementById('readingCard').style.display = 'none';
         document.getElementById('chunkInput').style.display = '';
         updateProgress();
-        showPassage();  // 처음 지문 읽기 화면부터 다시
+        showPassage();
+      }
+
+      // ─── 결과 검토 ──────────────────────────────────────────────
+      function showReview() {
+        document.getElementById('doneCard').style.display = 'none';
+        document.getElementById('reviewCard').style.display = 'block';
+        buildReview();
+      }
+
+      function buildReview() {
+        // ── 통계 ──
+        const totalEntries = sessionLog.length;
+        const passedEntries = sessionLog.filter(e => e.allPassed !== undefined ? e.allPassed : e.passed).length;
+        const totalChunks = sessionLog.reduce((s, e) => s + (e.chunks ? e.chunks.length : 1), 0);
+        const passedChunks = sessionLog.reduce((s, e) => {
+          if (e.chunks) return s + e.chunks.filter(c => c.passed).length;
+          return s + (e.passed ? 1 : 0);
+        }, 0);
+        const accuracy = totalEntries > 0 ? Math.round(passedEntries / totalEntries * 100) : 0;
+
+        document.getElementById('reviewStatsRow').innerHTML = `
+          <div class="review-stat">
+            <div class="review-stat-num">${accuracy}%</div>
+            <div class="review-stat-label">문장 정답률</div>
+          </div>
+          <div class="review-stat">
+            <div class="review-stat-num">${passedEntries}/${totalEntries}</div>
+            <div class="review-stat-label">완벽한 문장</div>
+          </div>
+          <div class="review-stat">
+            <div class="review-stat-num">${passedChunks}/${totalChunks}</div>
+            <div class="review-stat-label">청크 정답</div>
+          </div>
+          <div class="review-stat">
+            <div class="review-stat-num">${totalXp}</div>
+            <div class="review-stat-label">획득 XP</div>
+          </div>
+        `;
+
+        // ── 약점 분석 ──
+        const failedItems = [];
+        sessionLog.forEach(e => {
+          if (e.mode === 'chunk') {
+            e.chunks.forEach(c => {
+              if (!c.passed) failedItems.push({ english: c.english, student: c.studentKorean, model: c.modelKorean, passageNum: e.passageNum });
+            });
+          } else if (!e.passed) {
+            failedItems.push({ english: e.english, student: e.studentKorean, model: e.modelAnswer, passageNum: e.passageNum });
+          }
+        });
+
+        const weakEl = document.getElementById('weaknessSummary');
+        if (failedItems.length === 0) {
+          weakEl.innerHTML = '<div class="weakness-box perfect">🎉 모든 청크를 완벽하게 번역했어요!</div>';
+        } else {
+          const shown = failedItems.slice(0, 6);
+          weakEl.innerHTML = `
+            <div class="weakness-box">
+              <h3>약점 분석 — 틀린 청크 ${failedItems.length}개 중 상위 ${shown.length}개</h3>
+              ${shown.map(item => `
+                <div class="weakness-item">
+                  <div class="weakness-en">${escHtml(item.english)}</div>
+                  <div class="weakness-row">
+                    <span class="weakness-student">${escHtml(item.student || '(미입력)')}</span>
+                    <span class="weakness-arrow">→</span>
+                    <span class="weakness-model">${escHtml(item.model || '')}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        // ── 지문별 상세 ──
+        const byPassage = {};
+        sessionLog.forEach(e => {
+          if (!byPassage[e.passageNum]) byPassage[e.passageNum] = [];
+          byPassage[e.passageNum].push(e);
+        });
+
+        const passagesEl = document.getElementById('reviewPassages');
+        passagesEl.innerHTML = '';
+        Object.entries(byPassage).forEach(([num, entries]) => {
+          const total = entries.length;
+          const passed = entries.filter(e => e.allPassed !== undefined ? e.allPassed : e.passed).length;
+          const scoreClass = passed === total ? 'perfect' : passed >= total / 2 ? 'good' : 'poor';
+          const section = document.createElement('div');
+          section.className = 'review-passage-section';
+          const bodyId = `rbody-${num}`;
+          section.innerHTML = `
+            <div class="review-passage-header" onclick="document.getElementById('${bodyId}').classList.toggle('hidden')">
+              <span>${num}번 지문</span>
+              <span class="review-passage-score ${scoreClass}">${passed}/${total} 완벽</span>
+            </div>
+            <div class="review-passage-body" id="${bodyId}">
+              ${entries.map(entry => {
+                const isPassed = entry.allPassed !== undefined ? entry.allPassed : entry.passed;
+                const chunkHtml = entry.mode === 'chunk'
+                  ? `<div class="review-chunks">${entry.chunks.map(c => `
+                      <div class="review-chunk ${c.passed ? 'passed' : 'failed'}">
+                        <span class="review-chunk-en">${escHtml(c.english)}</span>
+                        <span class="review-chunk-student">${escHtml(c.studentKorean || '?')}</span>
+                        ${!c.passed ? `<span class="review-chunk-model">→ ${escHtml(c.modelKorean || '')}</span>` : ''}
+                      </div>`).join('')}
+                    </div>`
+                  : `<div class="review-legacy">
+                      <span>내 번역: ${escHtml(entry.studentKorean || '')}</span>
+                      ${!entry.passed && entry.modelAnswer ? `<span>모범: ${escHtml(entry.modelAnswer)}</span>` : ''}
+                    </div>`;
+                return `
+                  <div class="review-sentence ${isPassed ? 'passed' : 'failed'}">
+                    <div class="review-sentence-en">${escHtml(entry.english)}</div>
+                    ${chunkHtml}
+                  </div>`;
+              }).join('')}
+            </div>
+          `;
+          passagesEl.appendChild(section);
+        });
       }
 
       function escHtml(str) {

@@ -1,11 +1,1 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "homework-checker",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["app.py"],
-      "port": 5000
-    }
-  ]
-}
+{"version":"0.0.1","configurations":[{"name":"checking_homework","runtimeExecutable":"python","runtimeArgs":["app.py"],"port":5000}]}
